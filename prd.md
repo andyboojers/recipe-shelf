@@ -36,6 +36,8 @@ The main problem is that many recipes are currently scattered across physical ma
 
 * The MVP must not require cloud hosting for the application runtime, though it may depend on Google Drive for recipe data storage and retrieval.
 
+* The system must support splitting pages that contain multiple distinct recipes.
+
 ### Should Have
 
 * The system should create a recipe draft after OCR and allow manual review/correction before the recipe is saved to the searchable library.
@@ -44,13 +46,12 @@ The main problem is that many recipes are currently scattered across physical ma
 
 ### Could Have
 
-* The system could later support splitting pages that contain multiple recipes, but this is out of scope for the MVP.
+* (No current "Could Have" requirements - multiple recipe splitting has been moved to MVP scope).
 
 ### Won't Have in MVP
 
 * Multi-user accounts or household profiles.
-* Public internet access outside the home network (except Google Drive integration).
-* Cloud OCR as a hard dependency.
+* Public internet access outside the home network (except Google Drive and Gemini API integration).
 * Meal planning, grocery lists, or nutrition analysis unless added later.
 
 ### Clarification on Backup Strategy
@@ -84,25 +85,20 @@ Single-node Docker Compose app on a Linux host.
 * GET /recipes/{id} → Metadata from cache
 * GET /files/{drive_file_id} → Image proxy (cache → Drive)
 
-### Image Processing + OCR
+### Image Processing + LLM Extraction
 
 Pipeline:
 
-1. Manual crop (frontend, required for screenshots). Frontend sends the already-cropped image to the backend.
-2. Auto-rotate (EXIF)
-3. Convert to grayscale
-4. Light contrast/denoise (OpenCV)
-5. OCR (Tesseract, --psm 6)
+1. Upload raw image (scan or screenshot) to the backend.
+2. The backend sends the image directly to the Google AI Gemini API.
+3. Gemini processes the image, identifies recipes (even multiple per page), and extracts structured JSON (title, ingredients, instructions, notes) along with bounding boxes for the recipe image.
+4. The backend uses the returned bounding boxes to crop the original image as needed.
 
-Note: Processed images are used only for OCR. Original color images are stored and displayed.
+Note: Gemini is responsible for both OCR and semantic parsing.
 
-### Parsing (Heuristics)
+### Parsing (LLM)
 
-* Title: first/most prominent line
-* Ingredients: lines matching quantity/unit regex
-* Steps: numbered lines or paragraphs
-* Time/Servings: regex (min/hr/serves)
-* Notes: remainder
+Parsing is handled entirely by the Gemini API, which returns a structured JSON payload directly mapped to our schema.
 
 ### Tag Suggestion
 
