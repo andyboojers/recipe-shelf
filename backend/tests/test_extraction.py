@@ -1,7 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
 from main import app
-from services.gemini import parse_gemini_response
 
 client = TestClient(app)
 
@@ -28,6 +27,10 @@ def test_extract_endpoint_success(mocker):
     
     assert response.status_code == 200
     data = response.json()
-    assert len(data["recipes"]) == 1
-    assert data["recipes"][0]["title"] == "Mocked Recipe 1"
-    assert data["recipes"][0]["notes"] == "Mock note"
+    assert len(data["draft_ids"]) == 1
+    draft_id = data["draft_ids"][0]
+    
+    # Verify draft was created
+    draft_resp = client.get(f"/api/drafts/{draft_id}")
+    assert draft_resp.status_code == 200
+    assert draft_resp.json()["title"] == "Mocked Recipe 1"

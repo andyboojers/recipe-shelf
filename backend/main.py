@@ -1,6 +1,15 @@
-from fastapi import FastAPI
-from schemas import ExtractionRequest, ExtractionResponse
+from fastapi import FastAPI, HTTPException
+from schemas import (
+    ExtractionRequest, ExtractionResponse, DraftResponse, 
+    RecipeSaveRequest, RecipeSearchResponse, RecipeMetadata
+)
 from services.gemini_service import extract_recipes_from_images
+from services.drive_service import save_recipe_to_drive
+from database import (
+    save_draft, get_draft, delete_draft, 
+    save_recipe_cache, get_recipe, search_recipes
+)
+import uuid
 
 app = FastAPI(title="Recipe Shelf API")
 
@@ -11,9 +20,98 @@ def health_check():
 @app.post("/api/extract", response_model=ExtractionResponse)
 def extract_recipe(request: ExtractionRequest):
     """
-    Extracts recipes from an uploaded base64 image.
+    Extracts recipes from an uploaded base64 image and saves them as drafts.
     """
-    # The frontend currently sends a single base64 image
     image_parts = [{"mime_type": "image/jpeg", "data": request.image_data}]
     recipes = extract_recipes_from_images(image_parts)
-    return ExtractionResponse(recipes=recipes)
+    
+    draft_ids = []
+    # If the mock returns a list of dictionaries, we access with .get()
+    for recipe in recipes:
+        draft_id = str(uuid.uuid4())
+        save_draft(
+            draft_id=draft_id,
+            title=recipe.get("title", "Untitled Recipe"),
+            ingredients=recipe.get("ingredients", []),
+            instructions=recipe.get("instructions", []),
+            notes=recipe.get("notes", ""),
+            image_path=""
+        )
+        draft_ids.append(draft_id)
+        
+    return ExtractionResponse(draft_ids=draft_ids)
+
+@app.get("/api/drafts/{draft_id}", response_model=DraftResponse)
+def get_draft_endpoint(draft_id: str):
+    draft = get_draft(draft_id)
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    return DraftResponse(**draft)
+
+@app.post("/api/recipes")
+def save_recipe_endpoint(request: RecipeSaveRequest):
+    draft = get_draft(request.draft_id)
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    
+    recipe_id = str(uuid.uuid4())
+    recipe_data = {
+        "title": request.title,
+        "ingredients": request.ingredients,
+        "instructions": request.instructions,
+        "notes": request.notes
+    }
+    
+    drive_file_id, image_drive_id = save_recipe_to_drive(recipe_id, recipe_data, draft.get("image_path"))
+    
+    save_recipe_cache(
+        recipe_id=recipe_id,
+        title=request.title,
+        ingredients=request.ingredients,
+        instructions=request.instructions,
+        notes=request.notes or "",
+        drive_file_id=drive_file_id,
+        image_drive_id=image_drive_id
+    )
+    
+    delete_draft(request.draft_id)
+    return {"status": "success", "recipe_id": recipe_id}
+
+@app.get("/api/recipes", response_model=RecipeSearchResponse)
+def search_recipes_endpoint(q: str = ""):
+    results = search_recipes(q)
+    return RecipeSearchResponse(results=results)
+
+@app.get("/api/recipes/{recipe_id}", response_model=RecipeMetadata)
+def get_recipe_endpoint(recipe_id: str):
+    recipe = get_recipe(recipe_id)
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return RecipeMetadata(**recipe)
+
+from schemas import RecipeUpdateRequest
+
+@app.put("/api/recipes/{recipe_id}")
+def update_recipe_endpoint(recipe_id: str, request: RecipeUpdateRequest):
+    recipe = get_recipe(recipe_id)
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    
+    # In a real app, update the file in Drive here. For now, update cache.
+    save_recipe_cache(
+        recipe_id=recipe_id,
+        title=request.title,
+        ingredients=request.ingredients,
+        instructions=request.instructions,
+        notes=request.notes or "",
+        drive_file_id=recipe["drive_file_id"],
+        image_drive_id=recipe["image_drive_id"]
+    )
+    return {"status": "success", "recipe_id": recipe_id}
+
+from fastapi.responses import Response
+
+@app.get("/api/files/{drive_file_id}")
+def get_file_endpoint(drive_file_id: str):
+    # Mocking the image stream from drive for MVP
+    return Response(content=b"dummy_image_data", media_type="image/jpeg")

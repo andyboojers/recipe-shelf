@@ -19,4 +19,38 @@ class ExtractionRequest(BaseModel):
     image_data: str = Field(..., description="Base64 encoded string of the recipe image")
 
 class ExtractionResponse(BaseModel):
-    recipes: List[RecipeResponse]
+    draft_ids: List[str]
+
+class DraftResponse(BaseModel):
+    id: str
+    title: str
+    ingredients: List[str]
+    instructions: List[str]
+    notes: Optional[str]
+    image_path: Optional[str]
+
+class RecipeSaveRequest(BaseModel):
+    draft_id: str
+    title: str
+    ingredients: List[str]
+    instructions: List[str]
+    notes: Optional[str]
+
+class RecipeUpdateRequest(BaseModel):
+    title: str
+    ingredients: List[str]
+    instructions: List[str]
+    notes: Optional[str]
+
+class RecipeMetadata(BaseModel):
+    id: str
+    title: str
+    ingredients: List[str]
+    instructions: List[str]
+    notes: Optional[str]
+    drive_file_id: Optional[str]
+    image_drive_id: Optional[str]
+    last_updated: Optional[str]
+
+class RecipeSearchResponse(BaseModel):
+    results: List[RecipeMetadata]

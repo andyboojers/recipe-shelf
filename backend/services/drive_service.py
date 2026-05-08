@@ -4,14 +4,15 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-CREDENTIALS_FILE = "/data/secrets/token.json"
+DATA_DIR = os.environ.get("DATA_DIR", "./data")
+CREDENTIALS_FILE = os.path.join(DATA_DIR, "secrets/token.json")
 RECIPE_ROOT_FOLDER_ID = os.environ.get("RECIPE_ROOT_FOLDER_ID")
 
 def get_drive_service():
     if os.path.exists(CREDENTIALS_FILE):
         creds = Credentials.from_authorized_user_file(CREDENTIALS_FILE, ["https://www.googleapis.com/auth/drive.file"])
         return build("drive", "v3", credentials=creds)
-    print("Warning: Google Drive token.json not found at /data/secrets/token.json. Drive sync will fail.")
+    print(f"Warning: Google Drive token.json not found at {CREDENTIALS_FILE}. Drive sync will fail.")
     return None
 
 def create_recipe_folder(service, folder_name):
@@ -49,7 +50,7 @@ def save_recipe_to_drive(recipe_id: str, recipe_data: dict, image_path: str):
     folder_id = create_recipe_folder(service, recipe_id)
 
     # Save JSON locally first
-    json_path = f"/data/drafts/{recipe_id}_recipe.json"
+    json_path = os.path.join(DATA_DIR, f"drafts/{recipe_id}_recipe.json")
     with open(json_path, "w") as f:
         json.dump(recipe_data, f, indent=2)
 
