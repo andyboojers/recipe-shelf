@@ -12,8 +12,13 @@ def get_drive_service():
     if os.path.exists(CREDENTIALS_FILE):
         creds = Credentials.from_authorized_user_file(CREDENTIALS_FILE, ["https://www.googleapis.com/auth/drive.file"])
         return build("drive", "v3", credentials=creds)
-    print(f"Warning: Google Drive token.json not found at {CREDENTIALS_FILE}. Drive sync will fail.")
-    return None
+    
+    use_mock = os.environ.get("USE_MOCK_DRIVE", "false").lower() == "true"
+    if use_mock:
+        print(f"Warning: Google Drive token.json not found at {CREDENTIALS_FILE}. Using mock mode.")
+        return None
+        
+    raise RuntimeError(f"Google Drive token.json not found at {CREDENTIALS_FILE} and USE_MOCK_DRIVE is not true. Drive sync cannot proceed.")
 
 def create_recipe_folder(service, folder_name):
     file_metadata = {

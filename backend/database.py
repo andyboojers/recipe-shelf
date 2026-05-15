@@ -24,6 +24,9 @@ def init_db():
             ingredients TEXT,
             instructions TEXT,
             notes TEXT,
+            servings TEXT,
+            cooking_time TEXT,
+            tags TEXT,
             drive_file_id TEXT,
             image_drive_id TEXT,
             raw_ocr_text TEXT,
@@ -39,6 +42,9 @@ def init_db():
             ingredients,
             instructions,
             notes,
+            servings,
+            cooking_time,
+            tags,
             raw_ocr_text
         )
     """)
@@ -46,8 +52,8 @@ def init_db():
     # Triggers for syncing recipes_cache with recipe_search
     cursor.execute("""
         CREATE TRIGGER IF NOT EXISTS recipes_cache_ai AFTER INSERT ON recipes_cache BEGIN
-            INSERT INTO recipe_search(id, title, ingredients, instructions, notes, raw_ocr_text)
-            VALUES (new.id, new.title, new.ingredients, new.instructions, new.notes, new.raw_ocr_text);
+            INSERT INTO recipe_search(id, title, ingredients, instructions, notes, servings, cooking_time, tags, raw_ocr_text)
+            VALUES (new.id, new.title, new.ingredients, new.instructions, new.notes, new.servings, new.cooking_time, new.tags, new.raw_ocr_text);
         END;
     """)
     cursor.execute("""
@@ -57,6 +63,9 @@ def init_db():
                 ingredients = new.ingredients,
                 instructions = new.instructions,
                 notes = new.notes,
+                servings = new.servings,
+                cooking_time = new.cooking_time,
+                tags = new.tags,
                 raw_ocr_text = new.raw_ocr_text
             WHERE id = old.id;
         END;
@@ -75,6 +84,9 @@ def init_db():
             ingredients TEXT,
             instructions TEXT,
             notes TEXT,
+            servings TEXT,
+            cooking_time TEXT,
+            tags TEXT,
             image_path TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -83,18 +95,21 @@ def init_db():
     conn.commit()
     conn.close()
 
-def save_draft(draft_id: str, title: str, ingredients: list, instructions: list, notes: str, image_path: str):
+def save_draft(draft_id: str, title: str, ingredients: list, instructions: list, notes: str, servings: str, cooking_time: str, tags: list, image_path: str):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT OR REPLACE INTO drafts (id, title, ingredients, instructions, notes, image_path)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO drafts (id, title, ingredients, instructions, notes, servings, cooking_time, tags, image_path)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         draft_id,
         title,
         json.dumps(ingredients) if ingredients else "[]",
         json.dumps(instructions) if instructions else "[]",
         notes,
+        servings,
+        cooking_time,
+        json.dumps(tags) if tags else "[]",
         image_path
     ))
     conn.commit()
@@ -114,6 +129,9 @@ def get_draft(draft_id: str) -> dict:
         "ingredients": json.loads(row["ingredients"]) if row["ingredients"] else [],
         "instructions": json.loads(row["instructions"]) if row["instructions"] else [],
         "notes": row["notes"],
+        "servings": row["servings"],
+        "cooking_time": row["cooking_time"],
+        "tags": json.loads(row["tags"]) if row["tags"] else [],
         "image_path": row["image_path"]
     }
 
@@ -124,18 +142,21 @@ def delete_draft(draft_id: str):
     conn.commit()
     conn.close()
 
-def save_recipe_cache(recipe_id: str, title: str, ingredients: list, instructions: list, notes: str, drive_file_id: str, image_drive_id: str):
+def save_recipe_cache(recipe_id: str, title: str, ingredients: list, instructions: list, notes: str, servings: str, cooking_time: str, tags: list, drive_file_id: str, image_drive_id: str):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT OR REPLACE INTO recipes_cache (id, title, ingredients, instructions, notes, drive_file_id, image_drive_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO recipes_cache (id, title, ingredients, instructions, notes, servings, cooking_time, tags, drive_file_id, image_drive_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         recipe_id,
         title,
         json.dumps(ingredients) if ingredients else "[]",
         json.dumps(instructions) if instructions else "[]",
         notes,
+        servings,
+        cooking_time,
+        json.dumps(tags) if tags else "[]",
         drive_file_id,
         image_drive_id
     ))
@@ -156,6 +177,9 @@ def get_recipe(recipe_id: str) -> dict:
         "ingredients": json.loads(row["ingredients"]) if row["ingredients"] else [],
         "instructions": json.loads(row["instructions"]) if row["instructions"] else [],
         "notes": row["notes"],
+        "servings": row["servings"],
+        "cooking_time": row["cooking_time"],
+        "tags": json.loads(row["tags"]) if row["tags"] else [],
         "drive_file_id": row["drive_file_id"],
         "image_drive_id": row["image_drive_id"],
         "last_updated": row["last_updated"]
@@ -184,6 +208,9 @@ def search_recipes(query: str) -> list[dict]:
             "ingredients": json.loads(row["ingredients"]) if row["ingredients"] else [],
             "instructions": json.loads(row["instructions"]) if row["instructions"] else [],
             "notes": row["notes"],
+            "servings": row["servings"],
+            "cooking_time": row["cooking_time"],
+            "tags": json.loads(row["tags"]) if row["tags"] else [],
             "drive_file_id": row["drive_file_id"],
             "image_drive_id": row["image_drive_id"],
             "last_updated": row["last_updated"]

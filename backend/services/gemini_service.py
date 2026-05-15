@@ -10,7 +10,7 @@ def configure_gemini():
 # Call on import to configure if env var is present
 configure_gemini()
 
-def extract_recipes_from_images(image_parts: list[dict]) -> list[dict]:
+def extract_recipes_from_images(image_parts: list[dict]) -> dict:
     """
     Extracts recipes from a list of images using Gemini.
     
@@ -18,7 +18,7 @@ def extract_recipes_from_images(image_parts: list[dict]) -> list[dict]:
         image_parts: list of dicts like [{"mime_type": "image/jpeg", "data": b"..."}]
     
     Returns:
-        List of recipe dictionaries.
+        Dictionary with 'recipes' and 'detected_photos'.
     """
     generation_config = {
         "temperature": 0.1,
@@ -29,18 +29,21 @@ def extract_recipes_from_images(image_parts: list[dict]) -> list[dict]:
         "You are an expert recipe extractor. Identify every distinct recipe present across the provided images. "
         "For each recipe, extract the title, ingredients, instructions, and notes. "
         "Identify the bounding box of the main photograph for that recipe. "
-        "Return a JSON array of objects with keys: "
+        "Return a JSON object with two keys: "
+        "'recipes' (a JSON array of objects representing the recipes), "
+        "'detected_photos' (a JSON array of objects with 'ymin', 'xmin', 'ymax', 'xmax' representing the bounding boxes of EVERY distinct photograph of food on the page, as floats between 0.0 and 1.0 representing relative coordinates). "
+        "For each recipe object, include: "
         "'title' (string), "
         "'ingredients' (list of strings), "
         "'instructions' (list of strings), "
         "'notes' (string), "
-        "'page_index' (integer, 0-indexed referring to the image containing the recipe's main photograph), "
-        "'image_bounding_box' (object with 'ymin', 'xmin', 'ymax', 'xmax' as floats between 0.0 and 1.0 representing relative coordinates). "
-        "If a recipe does not have an image, set image_bounding_box to null."
+        "'servings' (string, e.g. '4 people' or '2-3 servings', or null if not found), "
+        "'cooking_time' (string, total time required, or null if not found), "
+        "'tags' (list of strings, automatically categorized based on ingredients/cuisine, e.g., ['dinner', 'vegetarian', 'pasta']). "
     )
     
     model = genai.GenerativeModel(
-        model_name="gemini-1.5-pro",
+        model_name="gemini-flash-latest",
         generation_config=generation_config,
         system_instruction=system_instruction
     )
@@ -50,11 +53,13 @@ def extract_recipes_from_images(image_parts: list[dict]) -> list[dict]:
     try:
         response = model.generate_content(contents)
         data = json.loads(response.text)
-        if isinstance(data, dict) and "recipes" in data:
-            return data["recipes"]
+        if isinstance(data, dict):
+            recipes = data.get("recipes", [])
+            photos = data.get("detected_photos", [])
+            return {"recipes": recipes, "detected_photos": photos}
         elif isinstance(data, list):
-            return data
-        return []
+            return {"recipes": data, "detected_photos": []}
+        return {"recipes": [], "detected_photos": []}
     except Exception as e:
         print(f"Failed to parse Gemini response or API error: {e}")
-        return []
+        return {"recipes": [], "detected_photos": []}

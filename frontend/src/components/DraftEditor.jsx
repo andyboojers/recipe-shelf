@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 
-function DraftEditor({ recipe, onSave, onCancel }) {
+function DraftEditor({ draft, onSave, onCancel }) {
   const [saving, setSaving] = useState(false);
 
-  if (!recipe) return null;
+  if (!draft) return null;
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -11,11 +11,14 @@ function DraftEditor({ recipe, onSave, onCancel }) {
     
     const formData = new FormData(e.target);
     const updatedRecipe = {
-      draft_id: recipe.draft_id,
+      draft_id: draft.id,
       title: formData.get('title'),
       ingredients: formData.get('ingredients').split('\n').filter(i => i.trim()),
       instructions: formData.get('instructions').split('\n\n').filter(i => i.trim()),
       notes: formData.get('notes'),
+      servings: formData.get('servings'),
+      cooking_time: formData.get('cooking_time'),
+      tags: formData.get('tags').split(',').map(t => t.trim()).filter(t => t),
     };
     
     try {
@@ -25,90 +28,84 @@ function DraftEditor({ recipe, onSave, onCancel }) {
         body: JSON.stringify(updatedRecipe),
       });
       if (!res.ok) throw new Error('Save failed');
-      onSave(); // call parent onSave on success
+      onSave();
     } catch (err) {
-      alert("Error saving recipe.");
+      alert("Error saving recipe: " + err.message);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <form onSubmit={handleSave} className="draft-editor" style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
-      <h2>Edit Recipe Draft</h2>
+    <form onSubmit={handleSave} className="glass-card" style={{ maxWidth: '1000px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h2 style={{ color: 'var(--primary)' }}>Edit Recipe Draft</h2>
+      </div>
       
-      <div style={{ display: 'flex', gap: '30px', marginTop: '20px' }}>
-        <div style={{ flex: 1 }}>
-          {recipe.extracted_image_base64 ? (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {draft.image_path ? (
             <img 
-              src={recipe.extracted_image_base64} 
-              alt="Extracted Recipe" 
-              style={{ maxWidth: '100%', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)' }} 
+              src={`/api/files/${draft.image_path}`} 
+              alt="Recipe" 
+              style={{ width: '100%', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }} 
             />
           ) : (
-            <div style={{ padding: '40px', backgroundColor: '#f0f0f0', textAlign: 'center', borderRadius: '8px' }}>
-              No image extracted
+            <div style={{ aspectRatio: '3/4', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+              No image available
             </div>
           )}
         </div>
         
-        <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <label style={{ fontWeight: 'bold' }}>Title:</label>
-            <input 
-              type="text" 
-              name="title"
-              defaultValue={recipe.title} 
-              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} 
-            />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div>
+            <label>Title</label>
+            <input type="text" name="title" defaultValue={draft.title} required />
           </div>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <label style={{ fontWeight: 'bold' }}>Ingredients:</label>
-            <textarea 
-              name="ingredients"
-              defaultValue={recipe.ingredients?.join('\n')} 
-              rows={6} 
-              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontFamily: 'inherit' }} 
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label>Servings</label>
+              <input type="text" name="servings" defaultValue={draft.servings || ''} placeholder="e.g. 4 people" />
+            </div>
+            <div>
+              <label>Cooking Time</label>
+              <input type="text" name="cooking_time" defaultValue={draft.cooking_time || ''} placeholder="e.g. 45 mins" />
+            </div>
           </div>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <label style={{ fontWeight: 'bold' }}>Instructions (separated by empty line):</label>
-            <textarea 
-              name="instructions"
-              defaultValue={recipe.instructions?.join('\n\n')} 
-              rows={8} 
-              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontFamily: 'inherit' }} 
-            />
+          <div>
+            <label>Tags (comma separated)</label>
+            <input type="text" name="tags" defaultValue={draft.tags?.join(', ') || ''} placeholder="e.g. dinner, vegetarian" />
+          </div>
+          
+          <div>
+            <label>Ingredients (one per line)</label>
+            <textarea name="ingredients" defaultValue={draft.ingredients?.join('\n')} rows={6} required />
+          </div>
+          
+          <div>
+            <label>Instructions (separate steps with an empty line)</label>
+            <textarea name="instructions" defaultValue={draft.instructions?.join('\n\n')} rows={8} required />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <label style={{ fontWeight: 'bold' }}>Notes:</label>
-            <textarea 
-              name="notes"
-              defaultValue={recipe.notes} 
-              rows={3} 
-              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontFamily: 'inherit' }} 
-            />
+          <div>
+            <label>Notes (optional)</label>
+            <textarea name="notes" defaultValue={draft.notes} rows={3} />
           </div>
         </div>
       </div>
 
-      <div style={{ marginTop: '30px', display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
+      <div style={{ marginTop: '3rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end', borderTop: '1px solid var(--glass-border)', paddingTop: '2rem' }}>
         <button 
           type="button"
           onClick={onCancel}
-          style={{ padding: '10px 20px', borderRadius: '4px', border: '1px solid #ccc', cursor: 'pointer', background: 'white' }}
+          style={{ background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--text-main)', boxShadow: 'none' }}
         >
           Cancel
         </button>
-        <button 
-          type="submit"
-          disabled={saving}
-          style={{ padding: '10px 20px', borderRadius: '4px', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', background: saving ? '#ccc' : '#007bff', color: 'white', fontWeight: 'bold' }}
-        >
-          {saving ? 'Saving...' : 'Save Recipe'}
+        <button type="submit" disabled={saving}>
+          {saving ? 'Saving to Drive...' : 'Save Recipe'}
         </button>
       </div>
     </form>
