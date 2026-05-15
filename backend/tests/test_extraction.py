@@ -11,14 +11,17 @@ def test_parse_gemini_response_success():
 
 def test_extract_endpoint_success(mocker):
     """Functional test: POST /api/extract with mocked Gemini service."""
-    mocker.patch("main.extract_recipes_from_images", return_value=[{
+    mocker.patch("main.extract_recipes_from_images", return_value={"recipes": [{
         "title": "Mocked Recipe 1",
         "ingredients": ["Mock ingredient"],
         "instructions": ["Mock instruction"],
         "notes": "Mock note",
+        "servings": "4",
+        "cooking_time": "30m",
+        "tags": ["mock"],
         "page_index": 0,
         "image_bounding_box": {"ymin": 0.1, "xmin": 0.1, "ymax": 0.9, "xmax": 0.9}
-    }])
+    }], "detected_photos": []})
     
     response = client.post(
         "/api/extract",

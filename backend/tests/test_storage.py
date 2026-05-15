@@ -20,7 +20,7 @@ def setup_db():
 
 def test_get_draft_endpoint():
     draft_id = str(uuid.uuid4())
-    save_draft(draft_id, "Draft Recipe", ["Flour"], ["Mix"], "Notes", "path/to/img.jpg")
+    save_draft(draft_id, "Draft Recipe", ["Flour"], ["Mix"], "Notes", "4", "30 mins", ["test"], "path/to/img.jpg")
     
     response = client.get(f"/api/drafts/{draft_id}")
     assert response.status_code == 200
@@ -29,7 +29,7 @@ def test_get_draft_endpoint():
 
 def test_post_recipes_endpoint(mocker):
     draft_id = str(uuid.uuid4())
-    save_draft(draft_id, "To Be Saved", [], [], "", "")
+    save_draft(draft_id, "To Be Saved", [], [], "", "4", "30 mins", [], "")
     
     # Mock the drive service to avoid real uploads
     mocker.patch("main.save_recipe_to_drive", return_value=("drive_file_id_123", "image_drive_id_123"))
@@ -50,7 +50,7 @@ def test_post_recipes_endpoint(mocker):
 
 def test_search_recipes_endpoint():
     recipe_id = str(uuid.uuid4())
-    save_recipe_cache(recipe_id, "Unique Pancake", ["Flour", "Milk"], ["Cook"], "Delicious", "file1", "img1")
+    save_recipe_cache(recipe_id, "Unique Pancake", ["Flour", "Milk"], ["Cook"], "Delicious", "4", "30 mins", ["breakfast"], "file1", "img1")
     
     response = client.get("/api/recipes?q=Pancake")
     assert response.status_code == 200
@@ -60,7 +60,7 @@ def test_search_recipes_endpoint():
 
 def test_get_recipe_endpoint():
     recipe_id = str(uuid.uuid4())
-    save_recipe_cache(recipe_id, "Specific Recipe", [], [], "", "file1", "img1")
+    save_recipe_cache(recipe_id, "Specific Recipe", [], [], "", "4", "30 mins", [], "file1", "img1")
     
     response = client.get(f"/api/recipes/{recipe_id}")
     assert response.status_code == 200
