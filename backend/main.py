@@ -35,8 +35,8 @@ def extract_recipe(request: ExtractionRequest):
     try:
         image_parts = [{"mime_type": "image/jpeg", "data": request.image_data}]
         gemini_result = extract_recipes_from_images(image_parts)
-        recipes = gemini_result.get("recipes", [])
-        photos = gemini_result.get("detected_photos", [])
+        recipes = gemini_result.get("recipes") or []
+        photos = gemini_result.get("detected_photos") or []
         
         candidate_images = []
         if photos:

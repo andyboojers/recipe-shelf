@@ -32,8 +32,10 @@ function ImageUploader({ onUploadComplete }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image_data: base64Data })
         });
-        
-        if (!response.ok) throw new Error('Extraction failed');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || 'Extraction failed');
+        }
         const data = await response.json();
         onUploadComplete(data);
       } catch (err) {

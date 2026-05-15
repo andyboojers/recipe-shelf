@@ -11,9 +11,9 @@ The frontend displayed an opaque "Error extracting recipes" alert to the user af
 ### Root Cause Analysis
 Upon inspecting the backend logs and test suite, two separate but related issues were discovered:
 
-1. **Non-Deterministic LLM Output**: The `backend/main.py` code assumed that `gemini_result.get("recipes", [])` would *always* return a list of Python dictionaries. Because Generative AI models are non-deterministic, Gemini occasionally hallucinated and returned a list of strings instead. 
-   When the code attempted to execute `recipe.get("title")` on a string, Python threw an `AttributeError`, causing a 500 Internal Server Error.
-2. **Missing Error Boundaries**: The `/api/extract` endpoint did not have a global `try/except` block. Consequently, when the `AttributeError` (or any other unexpected error, like SQLite's `OperationalError: database is locked`) occurred, FastAPI threw an unhandled 500 error instead of returning a graceful JSON payload. This left the frontend with `response.ok = false` and no contextual error message.
+1. **Non-Deterministic LLM Output**: The `backend/main.py` code assumed that `gemini_result.get("recipes", [])` would *always* return a list of Python dictionaries. Because Generative AI models are non-deterministic, Gemini occasionally hallucinated and returned a list of strings instead, or even `{"recipes": null}`. 
+   When the code attempted to execute `recipe.get("title")` on a string, or iterate over a `NoneType` object, Python threw an exception (`AttributeError` or `TypeError`), causing a 500 Internal Server Error.
+2. **Missing Error Boundaries & UI Masking**: The `/api/extract` endpoint did not have a global `try/except` block. Even worse, the frontend `ImageUploader.jsx` hardcoded `throw new Error('Extraction failed')` without actually parsing the JSON `detail` payload from the 500 error. This left the frontend with an opaque error message that masked the true root cause.
 
 Furthermore, it was discovered that 5 unit tests were failing because they had not been updated to match the new API schemas and function signatures introduced in the multi-step UI update.
 
