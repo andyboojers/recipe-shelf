@@ -25,3 +25,20 @@ Furthermore, it was discovered that 5 unit tests were failing because they had n
 ### Prevention
 *   **Always Type Check LLM Output**: Never assume the structure of data returned by an LLM is correct. Use explicit type checking or Pydantic validation before accessing dictionary keys.
 *   **Keep Tests Green**: Ensure the test suite is run locally before merging any feature branch, as per the `/finish` workflow.
+
+## Defect 002: Broken Draft Image Rendering
+**Date:** 2026-05-16
+
+- [x] Fix broken draft image rendering on Edit Recipe page.
+
+### Description
+On the "Edit Recipe Draft" page, the recipe image renders as a broken icon.
+
+### Root Cause Analysis
+The frontend `DraftEditor.jsx` component attempts to load the image using `/api/files/${draft.image_path}`. However, `draft.image_path` stores the full absolute server file path (e.g., `/home/abooj/...`), resulting in an invalid URL. Furthermore, there is no endpoint on the backend to serve local draft images; the `/api/files/{drive_file_id}` endpoint is mocked and does not handle local files.
+
+### Resolution
+1. **New Backend Endpoint**: Added a GET `/api/drafts/{draft_id}/image` endpoint in [backend/main.py](file:///home/abooj/projects/recipe-shelf/backend/main.py) to read and return the draft's cropped image from the local filesystem (`data/drafts/{draft_id}.jpg`).
+2. **Frontend Update**: Updated [frontend/src/components/DraftEditor.jsx](file:///home/abooj/projects/recipe-shelf/frontend/src/components/DraftEditor.jsx) to target the new draft image endpoint.
+3. **Unit Testing**: Added `test_get_draft_image_endpoint` in [backend/tests/test_storage.py](file:///home/abooj/projects/recipe-shelf/backend/tests/test_storage.py) which verifies image serving works correctly.
+

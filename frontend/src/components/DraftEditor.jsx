@@ -46,7 +46,7 @@ function DraftEditor({ draft, onSave, onCancel }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {draft.image_path ? (
             <img 
-              src={`/api/files/${draft.image_path}`} 
+              src={`/api/drafts/${draft.id}/image`} 
               alt="Recipe" 
               style={{ width: '100%', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }} 
             />

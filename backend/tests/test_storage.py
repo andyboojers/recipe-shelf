@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from main import app
-from database import init_db, save_draft, save_recipe_cache, get_db
+from database import init_db, save_draft, save_recipe_cache, get_db, DATA_DIR
 import uuid
 
 client = TestClient(app)
@@ -66,3 +66,25 @@ def test_get_recipe_endpoint():
     assert response.status_code == 200
     data = response.json()
     assert data["title"] == "Specific Recipe"
+
+def test_get_draft_image_endpoint():
+    draft_id = str(uuid.uuid4())
+    import os
+    
+    drafts_dir = os.path.join(DATA_DIR, "drafts")
+    os.makedirs(drafts_dir, exist_ok=True)
+    img_path = os.path.join(drafts_dir, f"{draft_id}.jpg")
+    
+    with open(img_path, "wb") as f:
+        f.write(b"fake_image_content")
+        
+    save_draft(draft_id, "Draft With Image", [], [], "", "", "", [], img_path)
+    
+    response = client.get(f"/api/drafts/{draft_id}/image")
+    assert response.status_code == 200
+    assert response.content == b"fake_image_content"
+    
+    # Clean up file
+    if os.path.exists(img_path):
+        os.remove(img_path)
+

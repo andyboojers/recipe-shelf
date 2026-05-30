@@ -119,6 +119,16 @@ def attach_draft_image(draft_id: str, request: DraftImageAttachRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/drafts/{draft_id}/image")
+def get_draft_image(draft_id: str):
+    import os
+    from database import DATA_DIR
+    
+    file_path = os.path.join(DATA_DIR, "drafts", f"{draft_id}.jpg")
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(file_path)
+
 @app.get("/api/drafts/{draft_id}", response_model=DraftResponse)
 def get_draft_endpoint(draft_id: str):
     draft = get_draft(draft_id)
@@ -196,7 +206,7 @@ def update_recipe_endpoint(recipe_id: str, request: RecipeUpdateRequest):
     )
     return {"status": "success", "recipe_id": recipe_id}
 
-from fastapi.responses import Response
+from fastapi.responses import Response, FileResponse
 
 @app.get("/api/files/{drive_file_id}")
 def get_file_endpoint(drive_file_id: str):
