@@ -1,0 +1,64 @@
+name: Recipe Shelf Auto-Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'reports/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install & Validate Backend
+        working-directory: ./backend
+        run: |
+          pip install -r requirements.txt
+          pytest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install & Validate Frontend
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm run build
+
+  deploy-linux:
+    needs: validate
+    runs-on: [self-hosted, linux]
+    if: success()
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Create .env file from Secrets
+        run: |
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
+
+      - name: Deploy with Docker Compose
+        run: |
+          # 1. Pull latest changes (handled by checkout)
+          # 2. Rebuild and restart containers
+          docker compose up -d --build --remove-orphans
+          
+          # 3. Clean up unused images/containers to save disk space
+          docker image prune -f

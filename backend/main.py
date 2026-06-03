@@ -33,13 +33,14 @@ def extract_recipe(request: ExtractionRequest):
     Extracts recipes from an uploaded base64 image and saves them as drafts.
     """
     try:
-        image_parts = [{"mime_type": "image/jpeg", "data": request.image_data}]
+        mime_type = request.mime_type or "image/jpeg"
+        image_parts = [{"mime_type": mime_type, "data": request.image_data}]
         gemini_result = extract_recipes_from_images(image_parts)
         recipes = gemini_result.get("recipes") or []
         photos = gemini_result.get("detected_photos") or []
         
         candidate_images = []
-        if photos:
+        if photos and mime_type != "application/pdf":
             try:
                 # Decode the original image
                 img_bytes = base64.b64decode(request.image_data)
@@ -48,11 +49,21 @@ def extract_recipe(request: ExtractionRequest):
                 width, height = img.size
                 
                 for box in photos:
-                    # box has ymin, xmin, ymax, xmax (relative 0.0-1.0)
-                    left = int(box.get("xmin", 0) * width)
-                    top = int(box.get("ymin", 0) * height)
-                    right = int(box.get("xmax", 1) * width)
-                    bottom = int(box.get("ymax", 1) * height)
+                    xmin = box.get("xmin", 0)
+                    ymin = box.get("ymin", 0)
+                    xmax = box.get("xmax", 1)
+                    ymax = box.get("ymax", 1)
+
+                    if xmax > 1.0 or ymax > 1.0 or xmin > 1.0 or ymin > 1.0:
+                        xmin /= 1000.0
+                        ymin /= 1000.0
+                        xmax /= 1000.0
+                        ymax /= 1000.0
+
+                    left = int(xmin * width)
+                    top = int(ymin * height)
+                    right = int(xmax * width)
+                    bottom = int(ymax * height)
                     
                     cropped = img.crop((left, top, right, bottom))
                     cropped.thumbnail((400, 400)) # Resize to save bandwidth

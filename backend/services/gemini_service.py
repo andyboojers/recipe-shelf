@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import google.generativeai as genai
 
 def configure_gemini():
@@ -43,7 +44,7 @@ def extract_recipes_from_images(image_parts: list[dict]) -> dict:
     )
     
     model = genai.GenerativeModel(
-        model_name="gemini-flash-latest",
+        model_name="gemini-3.1-flash-lite",
         generation_config=generation_config,
         system_instruction=system_instruction
     )
@@ -51,8 +52,24 @@ def extract_recipes_from_images(image_parts: list[dict]) -> dict:
     contents = image_parts + ["Extract the recipes."]
     
     try:
-        response = model.generate_content(contents)
-        data = json.loads(response.text)
+        response = model.generate_content(contents, request_options={"timeout": 120})
+        
+        text = response.text.strip()
+        # Remove markdown code block syntax if present
+        if text.startswith("```json"):
+            text = text[7:]
+        elif text.startswith("```"):
+            text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+        
+        # In case there's still extra text, try to extract the outermost JSON object/array
+        match = re.search(r'(\{.*\}|\[.*\])', text, re.DOTALL)
+        if match:
+            text = match.group(1)
+            
+        data = json.loads(text)
         if isinstance(data, dict):
             recipes = data.get("recipes", [])
             photos = data.get("detected_photos", [])
@@ -62,4 +79,5 @@ def extract_recipes_from_images(image_parts: list[dict]) -> dict:
         return {"recipes": [], "detected_photos": []}
     except Exception as e:
         print(f"Failed to parse Gemini response or API error: {e}")
+        print(f"Raw response was: {response.text if 'response' in locals() else 'None'}")
         return {"recipes": [], "detected_photos": []}

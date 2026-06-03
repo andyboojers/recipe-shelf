@@ -20,6 +20,7 @@ class RecipeResponse(BaseModel):
 
 class ExtractionRequest(BaseModel):
     image_data: str = Field(..., description="Base64 encoded string of the recipe image")
+    mime_type: Optional[str] = Field("image/jpeg", description="MIME type of the uploaded file")
 
 class ExtractionResponse(BaseModel):
     draft_ids: List[str]

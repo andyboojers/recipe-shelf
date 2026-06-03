@@ -16,8 +16,10 @@ function ImageUploader({ onUploadComplete }) {
   };
 
   const processFile = (file) => {
-    if (!file || !file.type.startsWith('image/')) {
-      alert('Please upload a valid image file');
+    console.log("[DEBUG] processFile called with file:", file ? { name: file.name, type: file.type, size: file.size } : null);
+    const isImageOrPdf = file && (file.type.startsWith('image/') || file.type === 'application/pdf' || /\.(jpg|jpeg|png|webp|gif|heic|heif|pdf)$/i.test(file.name));
+    if (!isImageOrPdf) {
+      alert('Please upload a valid image or PDF file');
       return;
     }
 
@@ -25,12 +27,13 @@ function ImageUploader({ onUploadComplete }) {
     const reader = new FileReader();
     reader.onload = async (e) => {
       const base64Data = e.target.result.split(',')[1]; // Remove data:image/jpeg;base64,
+      const mimeType = file.type || "application/octet-stream";
       
       try {
         const response = await fetch('/api/extract', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image_data: base64Data })
+          body: JSON.stringify({ image_data: base64Data, mime_type: mimeType })
         });
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
