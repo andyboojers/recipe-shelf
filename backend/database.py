@@ -92,6 +92,16 @@ def init_db():
         )
     """)
     
+    # File cache tracking for LRU
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS file_cache (
+            drive_file_id TEXT PRIMARY KEY,
+            file_path TEXT NOT NULL,
+            file_size INTEGER NOT NULL,
+            last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
     conn.commit()
     conn.close()
 
@@ -216,3 +226,74 @@ def search_recipes(query: str) -> list[dict]:
             "last_updated": row["last_updated"]
         })
     return results
+
+def get_cached_file(drive_file_id: str) -> dict:
+    conn = get_db()
+    cursor = conn.cursor()
+    # Update last_accessed timestamp to keep it fresh (LRU)
+    from datetime import datetime, timezone
+    cursor.execute("""
+        UPDATE file_cache 
+        SET last_accessed = ? 
+        WHERE drive_file_id = ?
+    """, (datetime.now(timezone.utc).isoformat(), drive_file_id))
+    conn.commit()
+    
+    cursor.execute("SELECT * FROM file_cache WHERE drive_file_id = ?", (drive_file_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    return {
+        "drive_file_id": row["drive_file_id"],
+        "file_path": row["file_path"],
+        "file_size": row["file_size"],
+        "last_accessed": row["last_accessed"]
+    }
+
+def add_cached_file(drive_file_id: str, file_path: str, file_size: int):
+    conn = get_db()
+    cursor = conn.cursor()
+    from datetime import datetime, timezone
+    cursor.execute("""
+        INSERT OR REPLACE INTO file_cache (drive_file_id, file_path, file_size, last_accessed)
+        VALUES (?, ?, ?, ?)
+    """, (drive_file_id, file_path, file_size, datetime.now(timezone.utc).isoformat()))
+    conn.commit()
+    conn.close()
+
+def get_total_cache_size() -> int:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT SUM(file_size) FROM file_cache")
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row[0] is not None else 0
+
+def get_oldest_cached_files(limit: int) -> list[dict]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM file_cache 
+        ORDER BY last_accessed ASC 
+        LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    results = []
+    for row in rows:
+        results.append({
+            "drive_file_id": row["drive_file_id"],
+            "file_path": row["file_path"],
+            "file_size": row["file_size"],
+            "last_accessed": row["last_accessed"]
+        })
+    return results
+
+def delete_cached_file(drive_file_id: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM file_cache WHERE drive_file_id = ?", (drive_file_id,))
+    conn.commit()
+    conn.close()

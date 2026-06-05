@@ -2,7 +2,8 @@ import os
 import json
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+import io
 
 DATA_DIR = os.environ.get("DATA_DIR", "./data")
 CREDENTIALS_FILE = os.path.join(DATA_DIR, "secrets/token.json")
@@ -68,3 +69,34 @@ def save_recipe_to_drive(recipe_id: str, recipe_data: dict, image_path: str):
         image_drive_id = upload_file_to_drive(service, image_path, "original.jpg", "image/jpeg", folder_id)
 
     return drive_file_id, image_drive_id
+
+def download_file_from_drive(drive_file_id: str, dest_path: str) -> bool:
+    """
+    Downloads a file from Google Drive and saves it to dest_path.
+    Returns True if successful, False otherwise.
+    """
+    service = get_drive_service()
+    if not service:
+        # If mock mode is active, we write dummy data for testing / local development
+        print(f"Mocking Drive download for {drive_file_id}")
+        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+        with open(dest_path, "wb") as f:
+            f.write(b"dummy_mocked_image_from_drive")
+        return True
+
+    try:
+        request = service.files().get_media(fileId=drive_file_id)
+        file_stream = io.BytesIO()
+        downloader = MediaIoBaseDownload(file_stream, request)
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
+        
+        # Ensure parent directory exists
+        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+        with open(dest_path, "wb") as f:
+            f.write(file_stream.getvalue())
+        return True
+    except Exception as e:
+        print(f"Failed to download file {drive_file_id} from Drive: {e}")
+        return False
