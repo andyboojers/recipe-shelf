@@ -1,12 +1,14 @@
 import os
 import json
 from google.oauth2.credentials import Credentials
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 import io
 
 DATA_DIR = os.environ.get("DATA_DIR", "./data")
 CREDENTIALS_FILE = os.path.join(DATA_DIR, "secrets/token.json")
+SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "secrets/service_account.json")
 RECIPE_ROOT_FOLDER_ID = os.environ.get("RECIPE_ROOT_FOLDER_ID")
 
 def get_drive_service():
@@ -14,12 +16,18 @@ def get_drive_service():
         creds = Credentials.from_authorized_user_file(CREDENTIALS_FILE, ["https://www.googleapis.com/auth/drive.file"])
         return build("drive", "v3", credentials=creds)
     
+    if os.path.exists(SERVICE_ACCOUNT_FILE):
+        creds = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE, scopes=["https://www.googleapis.com/auth/drive"]
+        )
+        return build("drive", "v3", credentials=creds)
+    
     use_mock = os.environ.get("USE_MOCK_DRIVE", "false").lower() == "true"
     if use_mock:
-        print(f"Warning: Google Drive token.json not found at {CREDENTIALS_FILE}. Using mock mode.")
+        print(f"Warning: No Google Drive credentials found. Using mock mode.")
         return None
         
-    raise RuntimeError(f"Google Drive token.json not found at {CREDENTIALS_FILE} and USE_MOCK_DRIVE is not true. Drive sync cannot proceed.")
+    raise RuntimeError("Google Drive credentials (token.json or service_account.json) not found and USE_MOCK_DRIVE is not true. Drive sync cannot proceed.")
 
 def create_recipe_folder(service, folder_name):
     file_metadata = {
