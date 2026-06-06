@@ -12,6 +12,7 @@ import base64
 from PIL import Image, ImageOps
 from services.gemini_service import extract_recipes_from_images
 from services.drive_service import save_recipe_to_drive
+from services.cache_service import get_image_file
 from database import (
     save_draft, get_draft, delete_draft, 
     save_recipe_cache, get_recipe, search_recipes, init_db
@@ -221,5 +222,18 @@ from fastapi.responses import Response, FileResponse
 
 @app.get("/api/files/{drive_file_id}")
 def get_file_endpoint(drive_file_id: str):
-    # Mocking the image stream from drive for MVP
-    return Response(content=b"dummy_image_data", media_type="image/jpeg")
+    try:
+        file_path = get_image_file(drive_file_id)
+        return FileResponse(file_path, media_type="image/jpeg")
+    except Exception as e:
+        print(f"Error serving file {drive_file_id}: {e}")
+        try:
+            # Generate a simple fallback placeholder image using PIL
+            from PIL import Image
+            import io
+            img = Image.new('RGB', (300, 300), color = (220, 220, 220))
+            img_byte_arr = io.BytesIO()
+            img.save(img_byte_arr, format='JPEG')
+            return Response(content=img_byte_arr.getvalue(), media_type="image/jpeg")
+        except Exception:
+            raise HTTPException(status_code=404, detail="File not found")
