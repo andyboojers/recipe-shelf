@@ -6,6 +6,8 @@ services:
     restart: unless-stopped
     volumes:
       - ./data:/data
+    environment:
+      - DATA_DIR=/data
     env_file:
       - .env
 
