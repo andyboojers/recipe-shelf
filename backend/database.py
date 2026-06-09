@@ -29,6 +29,7 @@ def init_db():
             tags TEXT,
             drive_file_id TEXT,
             image_drive_id TEXT,
+            original_drive_id TEXT,
             raw_ocr_text TEXT,
             last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -88,6 +89,7 @@ def init_db():
             cooking_time TEXT,
             tags TEXT,
             image_path TEXT,
+            original_image_path TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -102,15 +104,25 @@ def init_db():
         )
     """)
     
+    # Run migrations for existing databases
+    try:
+        cursor.execute("ALTER TABLE drafts ADD COLUMN original_image_path TEXT")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE recipes_cache ADD COLUMN original_drive_id TEXT")
+    except sqlite3.OperationalError:
+        pass
+        
     conn.commit()
     conn.close()
 
-def save_draft(draft_id: str, title: str, ingredients: list, instructions: list, notes: str, servings: str, cooking_time: str, tags: list, image_path: str):
+def save_draft(draft_id: str, title: str, ingredients: list, instructions: list, notes: str, servings: str, cooking_time: str, tags: list, image_path: str, original_image_path: str = ""):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT OR REPLACE INTO drafts (id, title, ingredients, instructions, notes, servings, cooking_time, tags, image_path)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO drafts (id, title, ingredients, instructions, notes, servings, cooking_time, tags, image_path, original_image_path)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         draft_id,
         title,
@@ -120,7 +132,8 @@ def save_draft(draft_id: str, title: str, ingredients: list, instructions: list,
         servings,
         cooking_time,
         json.dumps(tags) if tags else "[]",
-        image_path
+        image_path,
+        original_image_path
     ))
     conn.commit()
     conn.close()
@@ -142,7 +155,8 @@ def get_draft(draft_id: str) -> dict:
         "servings": row["servings"],
         "cooking_time": row["cooking_time"],
         "tags": json.loads(row["tags"]) if row["tags"] else [],
-        "image_path": row["image_path"]
+        "image_path": row["image_path"],
+        "original_image_path": row["original_image_path"] if "original_image_path" in row.keys() else ""
     }
 
 def delete_draft(draft_id: str):
@@ -152,12 +166,12 @@ def delete_draft(draft_id: str):
     conn.commit()
     conn.close()
 
-def save_recipe_cache(recipe_id: str, title: str, ingredients: list, instructions: list, notes: str, servings: str, cooking_time: str, tags: list, drive_file_id: str, image_drive_id: str):
+def save_recipe_cache(recipe_id: str, title: str, ingredients: list, instructions: list, notes: str, servings: str, cooking_time: str, tags: list, drive_file_id: str, image_drive_id: str, original_drive_id: str = ""):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT OR REPLACE INTO recipes_cache (id, title, ingredients, instructions, notes, servings, cooking_time, tags, drive_file_id, image_drive_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO recipes_cache (id, title, ingredients, instructions, notes, servings, cooking_time, tags, drive_file_id, image_drive_id, original_drive_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         recipe_id,
         title,
@@ -168,7 +182,8 @@ def save_recipe_cache(recipe_id: str, title: str, ingredients: list, instruction
         cooking_time,
         json.dumps(tags) if tags else "[]",
         drive_file_id,
-        image_drive_id
+        image_drive_id,
+        original_drive_id
     ))
     conn.commit()
     conn.close()
@@ -192,6 +207,7 @@ def get_recipe(recipe_id: str) -> dict:
         "tags": json.loads(row["tags"]) if row["tags"] else [],
         "drive_file_id": row["drive_file_id"],
         "image_drive_id": row["image_drive_id"],
+        "original_drive_id": row["original_drive_id"] if "original_drive_id" in row.keys() else "",
         "last_updated": row["last_updated"]
     }
 

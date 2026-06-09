@@ -3,9 +3,10 @@ import ImageUploader from './components/ImageUploader';
 import RecipeSelector from './components/RecipeSelector';
 import ImageSelector from './components/ImageSelector';
 import DraftEditor from './components/DraftEditor';
+import RecipeDetail from './components/RecipeDetail';
 
 function App() {
-  // State machine: 'idle' | 'fetching_drafts' | 'selecting' | 'selecting_image' | 'editing'
+  // State machine: 'idle' | 'fetching_drafts' | 'selecting' | 'selecting_image' | 'editing' | 'viewing'
   const [viewState, setViewState] = useState('idle');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -15,6 +16,7 @@ function App() {
   const [candidateImages, setCandidateImages] = useState([]);
   const [loadedDrafts, setLoadedDrafts] = useState([]);
   const [selectedDraft, setSelectedDraft] = useState(null);
+  const [selectedRecipe, setSelectedRecipe] = useState(null);
 
   // Search recipes
   useEffect(() => {
@@ -99,6 +101,11 @@ function App() {
     setViewState('editing');
   };
 
+  const handleRecipeClick = (recipe) => {
+    setSelectedRecipe(recipe);
+    setViewState('viewing');
+  };
+
   return (
     <div>
       <header className="app-header">
@@ -122,7 +129,12 @@ function App() {
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
               {searchResults.map(recipe => (
-                <div key={recipe.id} className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div 
+                  key={recipe.id} 
+                  className="glass-card hover-scale" 
+                  onClick={() => handleRecipeClick(recipe)}
+                  style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', cursor: 'pointer' }}
+                >
                   <h3>{recipe.title || "Untitled"}</h3>
                   <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                     <span>{recipe.ingredients?.length || 0} ingredients</span>
@@ -175,6 +187,16 @@ function App() {
           draft={selectedDraft} 
           onSave={resetFlow}
           onCancel={resetFlow}
+        />
+      )}
+
+      {viewState === 'viewing' && (
+        <RecipeDetail 
+          recipe={selectedRecipe}
+          onBack={() => {
+            setSelectedRecipe(null);
+            setViewState('idle');
+          }}
         />
       )}
     </div>

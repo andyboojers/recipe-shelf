@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+import os
 from fastapi import FastAPI, HTTPException
 from schemas import (
     ExtractionRequest, ExtractionResponse, DraftResponse, 
@@ -77,12 +78,23 @@ def extract_recipe(request: ExtractionRequest):
                 print(f"Error cropping images: {e}")
     
         draft_ids = []
+        # Decode original scan once
+        img_bytes = base64.b64decode(request.image_data)
+        
         # If the mock returns a list of dictionaries, we access with .get()
         for recipe in recipes:
             if not isinstance(recipe, dict):
                 continue
                 
             draft_id = str(uuid.uuid4())
+            
+            # Save original scan for this draft
+            from database import DATA_DIR
+            original_path = os.path.join(DATA_DIR, "drafts", f"{draft_id}_original.jpg")
+            os.makedirs(os.path.dirname(original_path), exist_ok=True)
+            with open(original_path, "wb") as f:
+                f.write(img_bytes)
+                
             save_draft(
                 draft_id=draft_id,
                 title=recipe.get("title", "Untitled Recipe"),
@@ -92,7 +104,8 @@ def extract_recipe(request: ExtractionRequest):
                 servings=recipe.get("servings", ""),
                 cooking_time=recipe.get("cooking_time", ""),
                 tags=recipe.get("tags", []),
-                image_path=""
+                image_path="",
+                original_image_path=original_path
             )
             draft_ids.append(draft_id)
             
@@ -125,7 +138,8 @@ def attach_draft_image(draft_id: str, request: DraftImageAttachRequest):
             servings=draft.get("servings", ""),
             cooking_time=draft.get("cooking_time", ""),
             tags=draft.get("tags", []),
-            image_path=file_path
+            image_path=file_path,
+            original_image_path=draft.get("original_image_path", "")
         )
         return {"status": "success", "image_path": file_path}
     except Exception as e:
@@ -139,6 +153,16 @@ def get_draft_image(draft_id: str):
     file_path = os.path.join(DATA_DIR, "drafts", f"{draft_id}.jpg")
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(file_path)
+
+@app.get("/api/drafts/{draft_id}/original-image")
+def get_draft_original_image(draft_id: str):
+    import os
+    from database import DATA_DIR
+    
+    file_path = os.path.join(DATA_DIR, "drafts", f"{draft_id}_original.jpg")
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Original image not found")
     return FileResponse(file_path)
 
 @app.get("/api/drafts/{draft_id}", response_model=DraftResponse)
@@ -165,7 +189,12 @@ def save_recipe_endpoint(request: RecipeSaveRequest):
         "tags": request.tags
     }
     
-    drive_file_id, image_drive_id = save_recipe_to_drive(recipe_id, recipe_data, draft.get("image_path"))
+    drive_file_id, image_drive_id, original_drive_id = save_recipe_to_drive(
+        recipe_id, 
+        recipe_data, 
+        draft.get("image_path"), 
+        draft.get("original_image_path")
+    )
     
     save_recipe_cache(
         recipe_id=recipe_id,
@@ -177,7 +206,8 @@ def save_recipe_endpoint(request: RecipeSaveRequest):
         cooking_time=request.cooking_time or "",
         tags=request.tags or [],
         drive_file_id=drive_file_id,
-        image_drive_id=image_drive_id
+        image_drive_id=image_drive_id,
+        original_drive_id=original_drive_id
     )
     
     delete_draft(request.draft_id)

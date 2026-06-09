@@ -32,7 +32,7 @@ def test_post_recipes_endpoint(mocker):
     save_draft(draft_id, "To Be Saved", [], [], "", "4", "30 mins", [], "")
     
     # Mock the drive service to avoid real uploads
-    mocker.patch("main.save_recipe_to_drive", return_value=("drive_file_id_123", "image_drive_id_123"))
+    mocker.patch("main.save_recipe_to_drive", return_value=("drive_file_id_123", "image_drive_id_123", "original_drive_id_123"))
     
     payload = {
         "draft_id": draft_id,
