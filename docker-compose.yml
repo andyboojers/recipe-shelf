@@ -6,8 +6,10 @@ services:
     restart: unless-stopped
     volumes:
       - ./data:/data
+      - ./secrets:/secrets
     environment:
       - DATA_DIR=/data
+      - SERVICE_ACCOUNT_FILE=/secrets/service_account.json
     env_file:
       - .env
 

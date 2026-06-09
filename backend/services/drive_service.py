@@ -8,7 +8,7 @@ import io
 
 DATA_DIR = os.environ.get("DATA_DIR", "./data")
 CREDENTIALS_FILE = os.path.join(DATA_DIR, "secrets/token.json")
-SERVICE_ACCOUNT_FILE = os.path.join(DATA_DIR, "secrets/service_account.json")
+SERVICE_ACCOUNT_FILE = os.environ.get("SERVICE_ACCOUNT_FILE", os.path.join(DATA_DIR, "secrets/service_account.json"))
 RECIPE_ROOT_FOLDER_ID = os.environ.get("RECIPE_ROOT_FOLDER_ID")
 
 def get_drive_service():
