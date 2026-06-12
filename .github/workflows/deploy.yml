@@ -64,7 +64,7 @@ jobs:
         run: |
           # 1. Pull latest changes (handled by checkout)
           # 2. Rebuild and restart containers
-          docker compose up -d --build --remove-orphans
+          docker compose up -d --build
           
           # 3. Clean up unused images/containers to save disk space
           docker image prune -f
