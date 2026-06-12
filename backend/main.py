@@ -250,7 +250,7 @@ def update_recipe_endpoint(recipe_id: str, request: RecipeUpdateRequest):
 
 from fastapi.responses import Response, FileResponse
 
-@app.get("/api/files/{drive_file_id}")
+@app.get("/api/files/{drive_file_id:path}")
 def get_file_endpoint(drive_file_id: str):
     try:
         file_path = get_image_file(drive_file_id)

@@ -129,17 +129,10 @@ function RecipeDetail({ recipe, onBack }) {
           {/* Ingredients section with interactive check-off items */}
           <div className="glass-card" style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '12px' }}>
             <h3 style={{ margin: '0 0 1rem 0', color: 'var(--primary)', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>Ingredients</h3>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+            <ul style={{ paddingLeft: '1.2rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
               {recipe.ingredients?.map((ing, i) => (
-                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.8rem' }}>
-                  <input 
-                    type="checkbox" 
-                    id={`ing-${i}`} 
-                    style={{ marginTop: '0.2rem', cursor: 'pointer', accentColor: 'var(--primary)' }} 
-                  />
-                  <label htmlFor={`ing-${i}`} style={{ color: 'var(--text-main)', fontSize: '1.05rem', cursor: 'pointer' }}>
-                    {ing}
-                  </label>
+                <li key={i} style={{ color: 'var(--text-main)', fontSize: '1.05rem', lineHeight: '1.5' }}>
+                  {ing}
                 </li>
               ))}
             </ul>
