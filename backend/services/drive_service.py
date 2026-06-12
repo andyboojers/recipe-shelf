@@ -47,18 +47,21 @@ def upload_file_to_drive(service, file_path, name, mime_type, parent_id):
     file = service.files().create(body=file_metadata, media_body=media, fields="id").execute()
     return file.get("id")
 
-def save_recipe_to_drive(recipe_id: str, recipe_data: dict, image_path: str):
+def save_recipe_to_drive(recipe_id: str, recipe_data: dict, image_path: str, original_image_path: str = None):
     """
     Saves a recipe to Google Drive:
     1. Creates a folder named after recipe_id
     2. Uploads the recipe.json
-    3. Uploads the image (if exists)
+    3. Uploads the original scan image
+    4. Uploads the cropped thumbnail image (if exists)
     """
     service = get_drive_service()
     if not service:
         # Mocking for local dev if tokens aren't set
         print(f"Mocking Drive save for {recipe_id}")
-        return "mock_drive_file_id", "mock_image_drive_id"
+        mock_img = f"local:{image_path}" if image_path else "mock_image_drive_id"
+        mock_orig = f"local:{original_image_path}" if original_image_path else "mock_original_drive_id"
+        return "mock_drive_file_id", mock_img, mock_orig
 
     # Create folder
     folder_id = create_recipe_folder(service, recipe_id)
@@ -71,12 +74,17 @@ def save_recipe_to_drive(recipe_id: str, recipe_data: dict, image_path: str):
     # Upload JSON
     drive_file_id = upload_file_to_drive(service, json_path, "recipe.json", "application/json", folder_id)
 
-    # Upload Image
+    # Upload Original Image
+    original_drive_id = None
+    if original_image_path and os.path.exists(original_image_path):
+        original_drive_id = upload_file_to_drive(service, original_image_path, "original.jpg", "image/jpeg", folder_id)
+
+    # Upload Cropped Thumbnail Image
     image_drive_id = None
     if image_path and os.path.exists(image_path):
-        image_drive_id = upload_file_to_drive(service, image_path, "original.jpg", "image/jpeg", folder_id)
+        image_drive_id = upload_file_to_drive(service, image_path, "thumbnail.jpg", "image/jpeg", folder_id)
 
-    return drive_file_id, image_drive_id
+    return drive_file_id, image_drive_id, original_drive_id
 
 def download_file_from_drive(drive_file_id: str, dest_path: str) -> bool:
     """
@@ -88,6 +96,12 @@ def download_file_from_drive(drive_file_id: str, dest_path: str) -> bool:
         # If mock mode is active, we write dummy data for testing / local development
         print(f"Mocking Drive download for {drive_file_id}")
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+        if drive_file_id.startswith("local:"):
+            import shutil
+            src_path = drive_file_id[6:]
+            if os.path.exists(src_path):
+                shutil.copy2(src_path, dest_path)
+                return True
         with open(dest_path, "wb") as f:
             f.write(b"dummy_mocked_image_from_drive")
         return True

@@ -36,6 +36,7 @@ class DraftResponse(BaseModel):
     cooking_time: Optional[str] = None
     tags: List[str] = []
     image_path: Optional[str]
+    original_image_path: Optional[str] = None
 
 class DraftImageAttachRequest(BaseModel):
     image_data: str = Field(..., description="Base64 encoded string of the cropped thumbnail image")
@@ -70,6 +71,7 @@ class RecipeMetadata(BaseModel):
     tags: List[str] = []
     drive_file_id: Optional[str]
     image_drive_id: Optional[str]
+    original_drive_id: Optional[str] = None
     last_updated: Optional[str]
 
 class RecipeSearchResponse(BaseModel):
