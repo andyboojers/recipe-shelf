@@ -5,6 +5,7 @@ from google.oauth2.credentials import Credentials
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+from googleapiclient.errors import HttpError
 import io
 
 DATA_DIR = os.environ.get("DATA_DIR", "./data")
@@ -53,8 +54,18 @@ def create_recipe_folder(service, folder_name):
         "mimeType": "application/vnd.google-apps.folder",
         "parents": [RECIPE_ROOT_FOLDER_ID] if RECIPE_ROOT_FOLDER_ID else []
     }
-    folder = service.files().create(body=file_metadata, fields="id").execute()
-    return folder.get("id")
+    try:
+        folder = service.files().create(body=file_metadata, fields="id").execute()
+        return folder.get("id")
+    except HttpError as e:
+        if e.resp.status == 404 and RECIPE_ROOT_FOLDER_ID:
+            raise RuntimeError(
+                f"Google Drive folder '{RECIPE_ROOT_FOLDER_ID}' not found or not accessible. "
+                "If you are using a Service Account, make sure to share the Google Drive folder "
+                "with the service account email address (found in your service account JSON file under 'client_email') "
+                "and grant it 'Editor' access."
+            ) from e
+        raise e
 
 def upload_file_to_drive(service, file_path, name, mime_type, parent_id):
     file_metadata = {
