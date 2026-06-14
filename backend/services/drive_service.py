@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from google.oauth2.credentials import Credentials
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -9,7 +10,24 @@ import io
 DATA_DIR = os.environ.get("DATA_DIR", "./data")
 CREDENTIALS_FILE = os.path.join(DATA_DIR, "secrets/token.json")
 SERVICE_ACCOUNT_FILE = os.environ.get("SERVICE_ACCOUNT_FILE", os.path.join(DATA_DIR, "secrets/service_account.json"))
-RECIPE_ROOT_FOLDER_ID = os.environ.get("RECIPE_ROOT_FOLDER_ID")
+
+def extract_folder_id(folder_input: str) -> str:
+    if not folder_input:
+        return folder_input
+    folder_input = folder_input.strip()
+    if folder_input.startswith(("http://", "https://")):
+        # e.g., https://drive.google.com/drive/folders/1pD_o_G-KL6ie_lRNu7a4fs4EcxecSq-V
+        # or https://drive.google.com/drive/u/0/folders/1pD_o_G-KL6ie_lRNu7a4fs4EcxecSq-V
+        match = re.search(r'folders/([a-zA-Z0-9-_]+)', folder_input)
+        if match:
+            return match.group(1)
+        # e.g., https://drive.google.com/open?id=1pD_o_G-KL6ie_lRNu7a4fs4EcxecSq-V
+        match = re.search(r'[?&]id=([a-zA-Z0-9-_]+)', folder_input)
+        if match:
+            return match.group(1)
+    return folder_input
+
+RECIPE_ROOT_FOLDER_ID = extract_folder_id(os.environ.get("RECIPE_ROOT_FOLDER_ID"))
 
 def get_drive_service():
     if os.path.exists(CREDENTIALS_FILE):
