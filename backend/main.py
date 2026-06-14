@@ -189,26 +189,42 @@ def save_recipe_endpoint(request: RecipeSaveRequest):
         "tags": request.tags
     }
     
-    drive_file_id, image_drive_id, original_drive_id = save_recipe_to_drive(
-        recipe_id, 
-        recipe_data, 
-        draft.get("image_path"), 
-        draft.get("original_image_path")
-    )
+    try:
+        drive_file_id, image_drive_id, original_drive_id = save_recipe_to_drive(
+            recipe_id, 
+            recipe_data, 
+            draft.get("image_path"), 
+            draft.get("original_image_path")
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Google Drive Save Failed: {str(e)}"
+        )
     
-    save_recipe_cache(
-        recipe_id=recipe_id,
-        title=request.title,
-        ingredients=request.ingredients,
-        instructions=request.instructions,
-        notes=request.notes or "",
-        servings=request.servings or "",
-        cooking_time=request.cooking_time or "",
-        tags=request.tags or [],
-        drive_file_id=drive_file_id,
-        image_drive_id=image_drive_id,
-        original_drive_id=original_drive_id
-    )
+    try:
+        save_recipe_cache(
+            recipe_id=recipe_id,
+            title=request.title,
+            ingredients=request.ingredients,
+            instructions=request.instructions,
+            notes=request.notes or "",
+            servings=request.servings or "",
+            cooking_time=request.cooking_time or "",
+            tags=request.tags or [],
+            drive_file_id=drive_file_id,
+            image_drive_id=image_drive_id,
+            original_drive_id=original_drive_id
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Local Cache Save Failed: {str(e)}"
+        )
     
     delete_draft(request.draft_id)
     return {"status": "success", "recipe_id": recipe_id}

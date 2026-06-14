@@ -27,7 +27,10 @@ function DraftEditor({ draft, onSave, onCancel }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedRecipe),
       });
-      if (!res.ok) throw new Error('Save failed');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Save failed');
+      }
       onSave();
     } catch (err) {
       alert("Error saving recipe: " + err.message);
