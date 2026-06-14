@@ -58,7 +58,12 @@ jobs:
       - name: Inject Google Drive Credentials
         run: |
           mkdir -p secrets
-          echo '${{ secrets.GOOGLE_DRIVE_CREDENTIALS_JSON }}' > secrets/service_account.json
+          if [ -n '${{ secrets.GOOGLE_DRIVE_TOKEN_JSON }}' ]; then
+            echo '${{ secrets.GOOGLE_DRIVE_TOKEN_JSON }}' > secrets/token.json
+          fi
+          if [ -n '${{ secrets.GOOGLE_DRIVE_CREDENTIALS_JSON }}' ]; then
+            echo '${{ secrets.GOOGLE_DRIVE_CREDENTIALS_JSON }}' > secrets/service_account.json
+          fi
 
       - name: Deploy with Docker Compose
         run: |
