@@ -55,7 +55,7 @@ def create_recipe_folder(service, folder_name):
         "parents": [RECIPE_ROOT_FOLDER_ID] if RECIPE_ROOT_FOLDER_ID else []
     }
     try:
-        folder = service.files().create(body=file_metadata, fields="id").execute()
+        folder = service.files().create(body=file_metadata, fields="id", supportsAllDrives=True).execute()
         return folder.get("id")
     except HttpError as e:
         if e.resp.status == 404 and RECIPE_ROOT_FOLDER_ID:
@@ -73,7 +73,7 @@ def upload_file_to_drive(service, file_path, name, mime_type, parent_id):
         "parents": [parent_id]
     }
     media = MediaFileUpload(file_path, mimetype=mime_type)
-    file = service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+    file = service.files().create(body=file_metadata, media_body=media, fields="id", supportsAllDrives=True).execute()
     return file.get("id")
 
 def save_recipe_to_drive(recipe_id: str, recipe_data: dict, image_path: str, original_image_path: str = None):
@@ -136,7 +136,7 @@ def download_file_from_drive(drive_file_id: str, dest_path: str) -> bool:
         return True
 
     try:
-        request = service.files().get_media(fileId=drive_file_id)
+        request = service.files().get_media(fileId=drive_file_id, supportsAllDrives=True)
         file_stream = io.BytesIO()
         downloader = MediaIoBaseDownload(file_stream, request)
         done = False

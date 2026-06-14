@@ -58,6 +58,6 @@ def test_drive_integration_upload_and_download():
         # 5. Clean up remote file on Google Drive
         if uploaded_file_id:
             try:
-                service.files().delete(fileId=uploaded_file_id).execute()
+                service.files().delete(fileId=uploaded_file_id, supportsAllDrives=True).execute()
             except HttpError as e:
                 print(f"Warning: Failed to delete remote test file from Google Drive: {e}")
