@@ -9,8 +9,8 @@ from googleapiclient.errors import HttpError
 import io
 
 DATA_DIR = os.environ.get("DATA_DIR", "./data")
-CREDENTIALS_FILE = os.path.join(DATA_DIR, "secrets/token.json")
 SERVICE_ACCOUNT_FILE = os.environ.get("SERVICE_ACCOUNT_FILE", os.path.join(DATA_DIR, "secrets/service_account.json"))
+CREDENTIALS_FILE = os.environ.get("CREDENTIALS_FILE", os.path.join(os.path.dirname(SERVICE_ACCOUNT_FILE), "token.json"))
 
 def extract_folder_id(folder_input: str) -> str:
     if not folder_input:
