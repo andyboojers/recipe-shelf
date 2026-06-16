@@ -48,6 +48,26 @@ def get_drive_service():
         
     raise RuntimeError("Google Drive credentials (token.json or service_account.json) not found and USE_MOCK_DRIVE is not true. Drive sync cannot proceed.")
 
+def generate_human_readable_folder_name(title: str, recipe_id: str) -> str:
+    if not title:
+        title = "recipe"
+    
+    name = title.lower()
+    name = re.sub(r'[^a-z0-9\s\-_]', '', name)
+    name = re.sub(r'[\s\-_]+', '_', name)
+    name = name.strip('_')
+    
+    if not name:
+        name = "recipe"
+        
+    if len(name) > 60:
+        name = name[:60].rstrip('_')
+        
+    suffix = recipe_id.replace('-', '')[:8] if recipe_id else ""
+    if suffix:
+        return f"{name}_{suffix}"
+    return name
+
 def create_recipe_folder(service, folder_name):
     file_metadata = {
         "name": folder_name,
@@ -93,7 +113,9 @@ def save_recipe_to_drive(recipe_id: str, recipe_data: dict, image_path: str, ori
         return "mock_drive_file_id", mock_img, mock_orig
 
     # Create folder
-    folder_id = create_recipe_folder(service, recipe_id)
+    title = recipe_data.get("title", "")
+    folder_name = generate_human_readable_folder_name(title, recipe_id)
+    folder_id = create_recipe_folder(service, folder_name)
 
     # Save JSON locally first
     json_path = os.path.join(DATA_DIR, f"drafts/{recipe_id}_recipe.json")
