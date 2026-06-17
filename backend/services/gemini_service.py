@@ -32,7 +32,7 @@ def extract_recipes_from_images(image_parts: list[dict]) -> dict:
         "Identify the bounding box of the main photograph for that recipe. "
         "Return a JSON object with two keys: "
         "'recipes' (a JSON array of objects representing the recipes), "
-        "'detected_photos' (a JSON array of objects with 'ymin', 'xmin', 'ymax', 'xmax' representing the bounding boxes of EVERY distinct photograph of food on the page, as floats between 0.0 and 1.0 representing relative coordinates). "
+        "'detected_photos' (a JSON array of objects with 'page_index' (integer starting from 0 for the first image), 'ymin', 'xmin', 'ymax', 'xmax' representing the bounding boxes of EVERY distinct photograph of food on the pages. Coordinates are floats between 0.0 and 1.0 representing relative coordinates). "
         "For each recipe object, include: "
         "'title' (string), "
         "'ingredients' (list of strings), "
