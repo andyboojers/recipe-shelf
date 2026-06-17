@@ -213,6 +213,13 @@ def get_recipe(recipe_id: str) -> dict:
         "last_updated": row["last_updated"]
     }
 
+def delete_recipe(recipe_id: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM recipes_cache WHERE id = ?", (recipe_id,))
+    conn.commit()
+    conn.close()
+
 def search_recipes(query: str) -> list[dict]:
     conn = get_db()
     cursor = conn.cursor()

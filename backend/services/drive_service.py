@@ -142,6 +142,28 @@ def save_recipe_to_drive(recipe_id: str, recipe_data: dict, image_path: str, ori
 
     return drive_file_id, image_drive_id, original_drive_ids
 
+def delete_recipe_folder(drive_file_id: str):
+    """
+    Deletes the parent folder of the recipe.json file from Google Drive.
+    """
+    if not drive_file_id or drive_file_id.startswith("local:") or drive_file_id.startswith("mock_"):
+        return
+        
+    service = get_drive_service()
+    if not service:
+        return
+        
+    try:
+        file = service.files().get(fileId=drive_file_id, fields="parents", supportsAllDrives=True).execute()
+        parents = file.get("parents")
+        if parents:
+            folder_id = parents[0]
+            service.files().delete(fileId=folder_id, supportsAllDrives=True).execute()
+        else:
+            service.files().delete(fileId=drive_file_id, supportsAllDrives=True).execute()
+    except Exception as e:
+        print(f"Failed to delete recipe folder for {drive_file_id}: {e}")
+
 def download_file_from_drive(drive_file_id: str, dest_path: str) -> bool:
     """
     Downloads a file from Google Drive and saves it to dest_path.

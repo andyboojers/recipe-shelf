@@ -84,7 +84,19 @@ def test_get_draft_image_endpoint():
     assert response.status_code == 200
     assert response.content == b"fake_image_content"
     
-    # Clean up file
     if os.path.exists(img_path):
         os.remove(img_path)
 
+def test_delete_recipe_endpoint(mocker):
+    recipe_id = str(uuid.uuid4())
+    save_recipe_cache(recipe_id, "Recipe to Delete", [], [], "", "4", "30 mins", [], "file_to_delete", "img_to_delete")
+    
+    mocker.patch("main.delete_recipe_folder", return_value=None)
+    
+    response = client.delete(f"/api/recipes/{recipe_id}")
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+    
+    # Check that recipe is deleted
+    get_resp = client.get(f"/api/recipes/{recipe_id}")
+    assert get_resp.status_code == 404
