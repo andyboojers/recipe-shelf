@@ -117,7 +117,8 @@ def init_db():
     conn.commit()
     conn.close()
 
-def save_draft(draft_id: str, title: str, ingredients: list, instructions: list, notes: str, servings: str, cooking_time: str, tags: list, image_path: str, original_image_path: str = ""):
+def save_draft(draft_id: str, title: str, ingredients: list, instructions: list, notes: str, servings: str, cooking_time: str, tags: list, image_path: str, original_image_paths: list = None):
+    original_image_paths = original_image_paths or []
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
@@ -133,7 +134,7 @@ def save_draft(draft_id: str, title: str, ingredients: list, instructions: list,
         cooking_time,
         json.dumps(tags) if tags else "[]",
         image_path,
-        original_image_path
+        json.dumps(original_image_paths)
     ))
     conn.commit()
     conn.close()
@@ -156,7 +157,7 @@ def get_draft(draft_id: str) -> dict:
         "cooking_time": row["cooking_time"],
         "tags": json.loads(row["tags"]) if row["tags"] else [],
         "image_path": row["image_path"],
-        "original_image_path": row["original_image_path"] if "original_image_path" in row.keys() else ""
+        "original_image_paths": json.loads(row["original_image_path"]) if "original_image_path" in row.keys() and row["original_image_path"] and row["original_image_path"].startswith("[") else ([row["original_image_path"]] if "original_image_path" in row.keys() and row["original_image_path"] else [])
     }
 
 def delete_draft(draft_id: str):
@@ -166,7 +167,8 @@ def delete_draft(draft_id: str):
     conn.commit()
     conn.close()
 
-def save_recipe_cache(recipe_id: str, title: str, ingredients: list, instructions: list, notes: str, servings: str, cooking_time: str, tags: list, drive_file_id: str, image_drive_id: str, original_drive_id: str = ""):
+def save_recipe_cache(recipe_id: str, title: str, ingredients: list, instructions: list, notes: str, servings: str, cooking_time: str, tags: list, drive_file_id: str, image_drive_id: str, original_drive_ids: list = None):
+    original_drive_ids = original_drive_ids or []
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
@@ -183,7 +185,7 @@ def save_recipe_cache(recipe_id: str, title: str, ingredients: list, instruction
         json.dumps(tags) if tags else "[]",
         drive_file_id,
         image_drive_id,
-        original_drive_id
+        json.dumps(original_drive_ids)
     ))
     conn.commit()
     conn.close()
@@ -207,7 +209,7 @@ def get_recipe(recipe_id: str) -> dict:
         "tags": json.loads(row["tags"]) if row["tags"] else [],
         "drive_file_id": row["drive_file_id"],
         "image_drive_id": row["image_drive_id"],
-        "original_drive_id": row["original_drive_id"] if "original_drive_id" in row.keys() else "",
+        "original_drive_ids": json.loads(row["original_drive_id"]) if "original_drive_id" in row.keys() and row["original_drive_id"] and row["original_drive_id"].startswith("[") else ([row["original_drive_id"]] if "original_drive_id" in row.keys() and row["original_drive_id"] else []),
         "last_updated": row["last_updated"]
     }
 
@@ -239,6 +241,7 @@ def search_recipes(query: str) -> list[dict]:
             "tags": json.loads(row["tags"]) if row["tags"] else [],
             "drive_file_id": row["drive_file_id"],
             "image_drive_id": row["image_drive_id"],
+            "original_drive_ids": json.loads(row["original_drive_id"]) if "original_drive_id" in row.keys() and row["original_drive_id"] and row["original_drive_id"].startswith("[") else ([row["original_drive_id"]] if "original_drive_id" in row.keys() and row["original_drive_id"] else []),
             "last_updated": row["last_updated"]
         })
     return results

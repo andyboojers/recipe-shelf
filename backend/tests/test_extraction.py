@@ -25,7 +25,7 @@ def test_extract_endpoint_success(mocker):
     
     response = client.post(
         "/api/extract",
-        json={"image_data": "base64_encoded_dummy_string"}
+        json={"images": [{"image_data": "base64_encoded_dummy_string", "mime_type": "image/jpeg"}]}
     )
     
     assert response.status_code == 200

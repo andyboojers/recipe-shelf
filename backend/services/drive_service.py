@@ -96,21 +96,23 @@ def upload_file_to_drive(service, file_path, name, mime_type, parent_id):
     file = service.files().create(body=file_metadata, media_body=media, fields="id", supportsAllDrives=True).execute()
     return file.get("id")
 
-def save_recipe_to_drive(recipe_id: str, recipe_data: dict, image_path: str, original_image_path: str = None):
+def save_recipe_to_drive(recipe_id: str, recipe_data: dict, image_path: str, original_image_paths: list = None):
     """
     Saves a recipe to Google Drive:
     1. Creates a folder named after recipe_id
     2. Uploads the recipe.json
-    3. Uploads the original scan image
+    3. Uploads the original scan images
     4. Uploads the cropped thumbnail image (if exists)
     """
+    original_image_paths = original_image_paths or []
+    
     service = get_drive_service()
     if not service:
         # Mocking for local dev if tokens aren't set
         print(f"Mocking Drive save for {recipe_id}")
         mock_img = f"local:{image_path}" if image_path else "mock_image_drive_id"
-        mock_orig = f"local:{original_image_path}" if original_image_path else "mock_original_drive_id"
-        return "mock_drive_file_id", mock_img, mock_orig
+        mock_origs = [f"local:{p}" for p in original_image_paths] if original_image_paths else ["mock_original_drive_id"]
+        return "mock_drive_file_id", mock_img, mock_origs
 
     # Create folder
     title = recipe_data.get("title", "")
@@ -125,17 +127,20 @@ def save_recipe_to_drive(recipe_id: str, recipe_data: dict, image_path: str, ori
     # Upload JSON
     drive_file_id = upload_file_to_drive(service, json_path, "recipe.json", "application/json", folder_id)
 
-    # Upload Original Image
-    original_drive_id = None
-    if original_image_path and os.path.exists(original_image_path):
-        original_drive_id = upload_file_to_drive(service, original_image_path, "original.jpg", "image/jpeg", folder_id)
+    # Upload Original Images
+    original_drive_ids = []
+    for idx, path in enumerate(original_image_paths):
+        if path and os.path.exists(path):
+            filename = f"original_{idx}.jpg" if len(original_image_paths) > 1 else "original.jpg"
+            file_id = upload_file_to_drive(service, path, filename, "image/jpeg", folder_id)
+            original_drive_ids.append(file_id)
 
     # Upload Cropped Thumbnail Image
     image_drive_id = None
     if image_path and os.path.exists(image_path):
         image_drive_id = upload_file_to_drive(service, image_path, "thumbnail.jpg", "image/jpeg", folder_id)
 
-    return drive_file_id, image_drive_id, original_drive_id
+    return drive_file_id, image_drive_id, original_drive_ids
 
 def download_file_from_drive(drive_file_id: str, dest_path: str) -> bool:
     """

@@ -35,22 +35,33 @@ def extract_recipe(request: ExtractionRequest):
     Extracts recipes from an uploaded base64 image and saves them as drafts.
     """
     try:
-        mime_type = request.mime_type or "image/jpeg"
-        image_parts = [{"mime_type": mime_type, "data": request.image_data}]
+        image_parts = [{"mime_type": img.mime_type or "image/jpeg", "data": img.image_data} for img in request.images]
         gemini_result = extract_recipes_from_images(image_parts)
         recipes = gemini_result.get("recipes") or []
         photos = gemini_result.get("detected_photos") or []
         
         candidate_images = []
-        if photos and mime_type != "application/pdf":
+        if photos:
             try:
-                # Decode the original image
-                img_bytes = base64.b64decode(request.image_data)
-                img = Image.open(io.BytesIO(img_bytes))
-                img = ImageOps.exif_transpose(img)
-                width, height = img.size
-                
+                # Decode original images to extract candidate thumbnails matching correct page_index
+                loaded_images = {}
                 for box in photos:
+                    page_index = box.get("page_index", 0)
+                    if page_index >= len(request.images):
+                        continue
+                        
+                    if page_index not in loaded_images:
+                        img_data = request.images[page_index]
+                        if img_data.mime_type == "application/pdf":
+                            continue
+                        img_bytes = base64.b64decode(img_data.image_data)
+                        img = Image.open(io.BytesIO(img_bytes))
+                        img = ImageOps.exif_transpose(img)
+                        loaded_images[page_index] = img
+                    
+                    img = loaded_images[page_index]
+                    width, height = img.size
+                    
                     xmin = box.get("xmin", 0)
                     ymin = box.get("ymin", 0)
                     xmax = box.get("xmax", 1)
@@ -78,22 +89,26 @@ def extract_recipe(request: ExtractionRequest):
                 print(f"Error cropping images: {e}")
     
         draft_ids = []
-        # Decode original scan once
-        img_bytes = base64.b64decode(request.image_data)
+        # Save original scans for this extraction
+        from database import DATA_DIR
+        import os
         
-        # If the mock returns a list of dictionaries, we access with .get()
+        # We will share these original scans across all drafted recipes
         for recipe in recipes:
             if not isinstance(recipe, dict):
                 continue
                 
             draft_id = str(uuid.uuid4())
             
-            # Save original scan for this draft
-            from database import DATA_DIR
-            original_path = os.path.join(DATA_DIR, "drafts", f"{draft_id}_original.jpg")
-            os.makedirs(os.path.dirname(original_path), exist_ok=True)
-            with open(original_path, "wb") as f:
-                f.write(img_bytes)
+            # Save all original scans for this draft
+            original_paths = []
+            for idx, img_data in enumerate(request.images):
+                img_bytes = base64.b64decode(img_data.image_data)
+                original_path = os.path.join(DATA_DIR, "drafts", f"{draft_id}_original_{idx}.jpg")
+                os.makedirs(os.path.dirname(original_path), exist_ok=True)
+                with open(original_path, "wb") as f:
+                    f.write(img_bytes)
+                original_paths.append(original_path)
                 
             save_draft(
                 draft_id=draft_id,
@@ -105,7 +120,7 @@ def extract_recipe(request: ExtractionRequest):
                 cooking_time=recipe.get("cooking_time", ""),
                 tags=recipe.get("tags", []),
                 image_path="",
-                original_image_path=original_path
+                original_image_paths=original_paths
             )
             draft_ids.append(draft_id)
             
@@ -139,7 +154,7 @@ def attach_draft_image(draft_id: str, request: DraftImageAttachRequest):
             cooking_time=draft.get("cooking_time", ""),
             tags=draft.get("tags", []),
             image_path=file_path,
-            original_image_path=draft.get("original_image_path", "")
+            original_image_paths=draft.get("original_image_paths", [])
         )
         return {"status": "success", "image_path": file_path}
     except Exception as e:
@@ -156,11 +171,15 @@ def get_draft_image(draft_id: str):
     return FileResponse(file_path)
 
 @app.get("/api/drafts/{draft_id}/original-image")
-def get_draft_original_image(draft_id: str):
+def get_draft_original_image(draft_id: str, page: int = 0):
     import os
     from database import DATA_DIR
     
-    file_path = os.path.join(DATA_DIR, "drafts", f"{draft_id}_original.jpg")
+    file_path = os.path.join(DATA_DIR, "drafts", f"{draft_id}_original_{page}.jpg")
+    # Fallback to older format if not found
+    if not os.path.exists(file_path):
+        file_path = os.path.join(DATA_DIR, "drafts", f"{draft_id}_original.jpg")
+        
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Original image not found")
     return FileResponse(file_path)
@@ -190,11 +209,11 @@ def save_recipe_endpoint(request: RecipeSaveRequest):
     }
     
     try:
-        drive_file_id, image_drive_id, original_drive_id = save_recipe_to_drive(
+        drive_file_id, image_drive_id, original_drive_ids = save_recipe_to_drive(
             recipe_id, 
             recipe_data, 
             draft.get("image_path"), 
-            draft.get("original_image_path")
+            draft.get("original_image_paths", [])
         )
     except Exception as e:
         import traceback
@@ -216,7 +235,7 @@ def save_recipe_endpoint(request: RecipeSaveRequest):
             tags=request.tags or [],
             drive_file_id=drive_file_id,
             image_drive_id=image_drive_id,
-            original_drive_id=original_drive_id
+            original_drive_ids=original_drive_ids
         )
     except Exception as e:
         import traceback

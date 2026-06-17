@@ -18,9 +18,12 @@ class RecipeResponse(BaseModel):
     page_index: Optional[int] = Field(None, description="Index of the image containing the recipe")
     image_bounding_box: Optional[BoundingBox] = Field(None, description="Bounding box of the recipe image")
 
-class ExtractionRequest(BaseModel):
+class ImageInput(BaseModel):
     image_data: str = Field(..., description="Base64 encoded string of the recipe image")
     mime_type: Optional[str] = Field("image/jpeg", description="MIME type of the uploaded file")
+
+class ExtractionRequest(BaseModel):
+    images: List[ImageInput] = Field(..., description="List of uploaded images to extract from")
 
 class ExtractionResponse(BaseModel):
     draft_ids: List[str]
@@ -36,7 +39,7 @@ class DraftResponse(BaseModel):
     cooking_time: Optional[str] = None
     tags: List[str] = []
     image_path: Optional[str]
-    original_image_path: Optional[str] = None
+    original_image_paths: List[str] = []
 
 class DraftImageAttachRequest(BaseModel):
     image_data: str = Field(..., description="Base64 encoded string of the cropped thumbnail image")
@@ -71,7 +74,7 @@ class RecipeMetadata(BaseModel):
     tags: List[str] = []
     drive_file_id: Optional[str]
     image_drive_id: Optional[str]
-    original_drive_id: Optional[str] = None
+    original_drive_ids: List[str] = []
     last_updated: Optional[str]
 
 class RecipeSearchResponse(BaseModel):
