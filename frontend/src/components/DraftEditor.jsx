@@ -47,12 +47,25 @@ function DraftEditor({ draft, onSave, onCancel }) {
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {draft.image_path ? (
-            <img 
-              src={`/api/drafts/${draft.id}/image`} 
-              alt="Recipe" 
-              style={{ width: '100%', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }} 
-            />
+          {draft.original_image_paths && draft.original_image_paths.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', position: 'sticky', top: '2rem' }}>
+              {draft.original_image_paths.map((_, idx) => (
+                <img 
+                  key={idx}
+                  src={`/api/drafts/${draft.id}/original-image?page=${idx}`} 
+                  alt={`Original Scan ${idx + 1}`} 
+                  style={{ width: '100%', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }} 
+                />
+              ))}
+            </div>
+          ) : draft.image_path ? (
+            <div style={{ position: 'sticky', top: '2rem' }}>
+              <img 
+                src={`/api/drafts/${draft.id}/image`} 
+                alt="Recipe" 
+                style={{ width: '100%', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }} 
+              />
+            </div>
           ) : (
             <div style={{ aspectRatio: '3/4', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
               No image available

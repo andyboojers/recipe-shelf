@@ -36,21 +36,24 @@ function RecipeDetail({ recipe, onBack }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <h3 style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Original Scan</h3>
           
-          {recipe.original_drive_id ? (
-            <div style={{ 
-              borderRadius: '16px', 
-              overflow: 'hidden', 
-              boxShadow: '0 12px 40px rgba(0,0,0,0.6)', 
-              border: '1px solid var(--glass-border)',
-              background: 'rgba(0,0,0,0.3)',
-              position: 'sticky',
-              top: '2rem'
-            }}>
-              <img 
-                src={`/api/files/${recipe.original_drive_id}`} 
-                alt="Original Scan" 
-                style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '75vh', objectFit: 'contain' }} 
-              />
+          {recipe.original_drive_ids && recipe.original_drive_ids.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', position: 'sticky', top: '2rem', maxHeight: '100vh', overflowY: 'auto', paddingRight: '0.5rem' }}>
+              {recipe.original_drive_ids.map((drive_id, idx) => (
+                <div key={idx} style={{ 
+                  borderRadius: '16px', 
+                  overflow: 'hidden', 
+                  boxShadow: '0 12px 40px rgba(0,0,0,0.6)', 
+                  border: '1px solid var(--glass-border)',
+                  background: 'rgba(0,0,0,0.3)',
+                  flexShrink: 0
+                }}>
+                  <img 
+                    src={`/api/files/${drive_id}`} 
+                    alt={`Original Scan ${idx + 1}`} 
+                    style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'contain' }} 
+                  />
+                </div>
+              ))}
             </div>
           ) : recipe.image_drive_id ? (
             <div style={{ 
