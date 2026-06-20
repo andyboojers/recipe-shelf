@@ -12,11 +12,11 @@ import io
 import base64
 from PIL import Image, ImageOps
 from services.gemini_service import extract_recipes_from_images
-from services.drive_service import save_recipe_to_drive
+from services.drive_service import save_recipe_to_drive, delete_recipe_folder
 from services.cache_service import get_image_file
 from database import (
     save_draft, get_draft, delete_draft, 
-    save_recipe_cache, get_recipe, search_recipes, init_db
+    save_recipe_cache, get_recipe, delete_recipe, search_recipes, init_db
 )
 import uuid
 
@@ -259,6 +259,24 @@ def get_recipe_endpoint(recipe_id: str):
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
     return RecipeMetadata(**recipe)
+
+@app.delete("/api/recipes/{recipe_id}")
+def delete_recipe_endpoint(recipe_id: str):
+    recipe = get_recipe(recipe_id)
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+        
+    try:
+        if recipe.get("drive_file_id"):
+            delete_recipe_folder(recipe["drive_file_id"])
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Warning: Failed to delete recipe folder from drive: {e}")
+        
+    delete_recipe(recipe_id)
+    return {"status": "success", "message": "Recipe deleted"}
+
 
 from schemas import RecipeUpdateRequest
 

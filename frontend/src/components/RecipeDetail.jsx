@@ -26,7 +26,38 @@ function RecipeDetail({ recipe, onBack }) {
         >
           ← Back to Library
         </button>
-        <h2 style={{ margin: 0, color: 'var(--primary)', fontWeight: '700' }}>Recipe Viewer</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button
+            onClick={() => {
+              if (window.confirm("Are you sure you want to delete this recipe? This action cannot be undone.")) {
+                fetch(`/api/recipes/${recipe.id}`, { method: 'DELETE' })
+                  .then(res => {
+                    if (res.ok) {
+                      onBack();
+                    } else {
+                      alert("Failed to delete recipe");
+                    }
+                  })
+                  .catch(err => alert("Error deleting recipe: " + err.message));
+              }
+            }}
+            style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#ef4444',
+              padding: '0.6rem 1.2rem',
+              borderRadius: '2rem',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              fontWeight: '600',
+              boxShadow: 'none'
+            }}
+            className="hover-scale"
+          >
+            Delete Recipe
+          </button>
+          <h2 style={{ margin: 0, color: 'var(--primary)', fontWeight: '700' }}>Recipe Viewer</h2>
+        </div>
       </div>
 
       {/* Main Layout: Side-by-Side original scan and parsed text */}
