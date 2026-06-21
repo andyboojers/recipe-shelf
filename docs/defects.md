@@ -42,3 +42,24 @@ The frontend `DraftEditor.jsx` component attempts to load the image using `/api/
 2. **Frontend Update**: Updated [frontend/src/components/DraftEditor.jsx](file:///home/abooj/projects/recipe-shelf/frontend/src/components/DraftEditor.jsx) to target the new draft image endpoint.
 3. **Unit Testing**: Added `test_get_draft_image_endpoint` in [backend/tests/test_storage.py](file:///home/abooj/projects/recipe-shelf/backend/tests/test_storage.py) which verifies image serving works correctly.
 
+---
+
+## Defect 003: iPhone HEIC Upload Failure
+**Date:** 2026-06-21
+
+- [x] Fix Defect 003: iPhone HEIC Upload Failure
+
+### Description
+When uploading a photo taken directly with an iPhone camera (natively in HEIC/HEIF format), the extraction process fails with an opaque "Load failed" message. The same image uploaded from Windows works because it has been converted to JPEG and contains a standard MIME type.
+
+### Root Cause Analysis
+1. **MIME Type Mapping:** In iOS/Safari, HEIC images selected from files sometimes have empty MIME types, which the frontend falls back to `application/octet-stream`. The Gemini API rejects `application/octet-stream` with a `400 Unsupported MIME type` error.
+2. **Missing Backend HEIC Image Support:** If the frontend correctly passes `image/heic` or `image/heif`, the backend's Python `Pillow` library throws `PIL.UnidentifiedImageError` during cropping because Pillow does not support HEIC/HEIF natively without additional packages like `pillow-heif`.
+
+### Resolution
+1. **Frontend MIME Type Resolution**: Updated [ImageUploader.jsx](file:///home/abooj/projects/recipe-shelf/frontend/src/components/ImageUploader.jsx) to automatically infer the MIME type (`image/heic` or `image/heif`) from the filename extension if `file.type` is empty or generic, avoiding backend/Gemini API `400 Unsupported MIME type` errors.
+2. **Pillow HEIC Opener Registration**: Added `pillow-heif` dependency to [requirements.txt](file:///home/abooj/projects/recipe-shelf/backend/requirements.txt) and registered the HEIF/HEIC opener via `register_heif_opener()` in [main.py](file:///home/abooj/projects/recipe-shelf/backend/main.py) on application startup. This allows Pillow to seamlessly decode and crop HEIC images.
+3. **Unit Testing**: Added `test_heic_image_loading` in [test_storage.py](file:///home/abooj/projects/recipe-shelf/backend/tests/test_storage.py) which verifies native HEIC/HEIF file reading.
+
+
+

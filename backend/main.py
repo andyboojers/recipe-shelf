@@ -2,6 +2,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
+from pillow_heif import register_heif_opener
+register_heif_opener()
+
 from fastapi import FastAPI, HTTPException
 from schemas import (
     ExtractionRequest, ExtractionResponse, DraftResponse, 
