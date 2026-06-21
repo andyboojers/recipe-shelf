@@ -37,3 +37,52 @@ def test_extract_endpoint_success(mocker):
     draft_resp = client.get(f"/api/drafts/{draft_id}")
     assert draft_resp.status_code == 200
     assert draft_resp.json()["title"] == "Mocked Recipe 1"
+
+def test_extract_endpoint_heic_conversion(mocker):
+    """Test that POST /api/extract converts incoming HEIC images to JPEG."""
+    import base64
+    import os
+    from PIL import Image
+    
+    heic_path = "backend/tests/test.heic"
+    assert os.path.exists(heic_path), "Test HEIC file is missing"
+    
+    with open(heic_path, "rb") as f:
+        heic_b64 = base64.b64encode(f.read()).decode("utf-8")
+        
+    mocker.patch("main.extract_recipes_from_images", return_value={"recipes": [{
+        "title": "HEIC Converted Recipe",
+        "ingredients": [],
+        "instructions": [],
+        "notes": "",
+        "servings": "",
+        "cooking_time": "",
+        "tags": []
+    }], "detected_photos": []})
+    
+    response = client.post(
+        "/api/extract",
+        json={"images": [{"image_data": heic_b64, "mime_type": "image/heic"}]}
+    )
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["draft_ids"]) == 1
+    draft_id = data["draft_ids"][0]
+    
+    draft_resp = client.get(f"/api/drafts/{draft_id}")
+    assert draft_resp.status_code == 200
+    orig_paths = draft_resp.json()["original_image_paths"]
+    assert len(orig_paths) == 1
+    
+    # Load the saved file and verify its format is JPEG, not HEIC
+    saved_path = orig_paths[0]
+    assert os.path.exists(saved_path)
+    
+    img = Image.open(saved_path)
+    assert img.format == "JPEG"
+    
+    # Clean up
+    if os.path.exists(saved_path):
+        os.remove(saved_path)
+
