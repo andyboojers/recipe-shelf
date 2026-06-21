@@ -121,7 +121,7 @@ function ImageUploader({ onUploadComplete }) {
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Extraction failed');
+        throw new Error(errorData.detail || `HTTP ${response.status} - Extraction failed`);
       }
       const data = await response.json();
       
@@ -135,7 +135,9 @@ function ImageUploader({ onUploadComplete }) {
       
       onUploadComplete(data);
     } catch (err) {
-      alert('Error extracting recipes: ' + err.message);
+      // Diagnostic output to help identify Safari/iOS 'Load failed' issues
+      const payloadSize = queuedFiles.length > 0 ? (JSON.stringify(queuedFiles.map(f => f.file.name)).length + " (approx metadata)") : 0;
+      alert(`Diagnostic Error Report:\n\nMessage: ${err.message}\nName: ${err.name}\nQueued Files: ${queuedFiles.length}\nUser Agent: ${navigator.userAgent}\n\nIf you see "Load failed", this usually indicates a network drop, an oversized payload (Nginx 413 error), or a strict HTTPS certificate block by iOS.`);
     } finally {
       setLoading(false);
     }
