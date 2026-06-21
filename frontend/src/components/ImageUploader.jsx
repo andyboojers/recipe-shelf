@@ -93,9 +93,19 @@ function ImageUploader({ onUploadComplete }) {
           const reader = new FileReader();
           reader.onload = (e) => {
             const base64Data = e.target.result.split(',')[1];
+            let mimeType = item.file.type;
+            if (!mimeType || mimeType === "application/octet-stream") {
+              const ext = item.file.name.split('.').pop().toLowerCase();
+              if (ext === 'heic') mimeType = 'image/heic';
+              else if (ext === 'heif') mimeType = 'image/heif';
+              else if (ext === 'png') mimeType = 'image/png';
+              else if (ext === 'webp') mimeType = 'image/webp';
+              else if (ext === 'pdf') mimeType = 'application/pdf';
+              else mimeType = 'image/jpeg';
+            }
             resolve({
               image_data: base64Data,
-              mime_type: item.file.type || "application/octet-stream"
+              mime_type: mimeType
             });
           };
           reader.onerror = reject;

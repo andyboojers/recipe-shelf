@@ -100,3 +100,17 @@ def test_delete_recipe_endpoint(mocker):
     # Check that recipe is deleted
     get_resp = client.get(f"/api/recipes/{recipe_id}")
     assert get_resp.status_code == 404
+
+def test_heic_image_loading():
+    """Verify that Pillow is configured to identify and load HEIC files."""
+    from PIL import Image
+    import os
+    
+    heic_path = "backend/tests/test.heic"
+    assert os.path.exists(heic_path), "Test HEIC file is missing"
+    
+    # Try to open the HEIC file
+    img = Image.open(heic_path)
+    assert img is not None
+    assert img.format in ["HEIF", "HEIC"]
+

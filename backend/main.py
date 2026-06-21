@@ -2,6 +2,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
+from pillow_heif import register_heif_opener
+register_heif_opener()
+
 from fastapi import FastAPI, HTTPException
 from schemas import (
     ExtractionRequest, ExtractionResponse, DraftResponse, 
@@ -35,6 +38,24 @@ def extract_recipe(request: ExtractionRequest):
     Extracts recipes from an uploaded base64 image and saves them as drafts.
     """
     try:
+        # Pre-process: Convert any HEIC/HEIF images to JPEG
+        for img in request.images:
+            mime = img.mime_type or "image/jpeg"
+            if mime.lower() in ["image/heic", "image/heif"]:
+                try:
+                    img_bytes = base64.b64decode(img.image_data)
+                    pil_img = Image.open(io.BytesIO(img_bytes))
+                    
+                    # Convert color space to RGB (HEIC can be CMYK or other formats) and save as JPEG
+                    buffered = io.BytesIO()
+                    pil_img.convert("RGB").save(buffered, format="JPEG", quality=90)
+                    
+                    img.image_data = base64.b64encode(buffered.getvalue()).decode("utf-8")
+                    img.mime_type = "image/jpeg"
+                    print("Successfully converted HEIC/HEIF image to JPEG")
+                except Exception as e:
+                    print(f"Warning: Failed to convert HEIC/HEIF to JPEG: {e}")
+
         image_parts = [{"mime_type": img.mime_type or "image/jpeg", "data": img.image_data} for img in request.images]
         gemini_result = extract_recipes_from_images(image_parts)
         recipes = gemini_result.get("recipes") or []
