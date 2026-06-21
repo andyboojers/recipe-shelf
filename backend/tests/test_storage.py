@@ -106,8 +106,8 @@ def test_heic_image_loading():
     from PIL import Image
     import os
     
-    heic_path = "backend/tests/test.heic"
-    assert os.path.exists(heic_path), "Test HEIC file is missing"
+    heic_path = os.path.join(os.path.dirname(__file__), "test.heic")
+    assert os.path.exists(heic_path), f"Test HEIC file is missing at {heic_path}"
     
     # Try to open the HEIC file
     img = Image.open(heic_path)

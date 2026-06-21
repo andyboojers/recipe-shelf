@@ -61,5 +61,28 @@ When uploading a photo taken directly with an iPhone camera (natively in HEIC/HE
 2. **Pillow HEIC Opener Registration**: Added `pillow-heif` dependency to [requirements.txt](file:///home/abooj/projects/recipe-shelf/backend/requirements.txt) and registered the HEIF/HEIC opener via `register_heif_opener()` in [main.py](file:///home/abooj/projects/recipe-shelf/backend/main.py) on application startup. This allows Pillow to seamlessly decode and crop HEIC images.
 3. **Unit Testing**: Added `test_heic_image_loading` in [test_storage.py](file:///home/abooj/projects/recipe-shelf/backend/tests/test_storage.py) which verifies native HEIC/HEIF file reading.
 
+---
+
+## Defect 004: CI/CD Test HEIC Path Failure
+**Date:** 2026-06-21
+
+- [x] Fix Defect 004: CI/CD Test HEIC Path Failure
+
+### Description
+In the CI/CD deployment pipeline, the backend validation step (`Install & Validate Backend`) fails during pytest execution. The errors indicate that `test.heic` is missing, even though the file is tracked in git.
+
+### Root Cause Analysis
+The unit tests reference the test image file using a hardcoded relative path: `heic_path = "backend/tests/test.heic"`. 
+Locally, pytest is run from the repository root, so this path resolves correctly. However, in the CI/CD pipeline, the working directory is set to `./backend` before running pytest. This causes the test to look for `backend/backend/tests/test.heic`, resulting in a file missing error.
+
+### Resolution
+Resolved the path to `test.heic` dynamically in [test_storage.py](file:///home/abooj/projects/recipe-shelf/backend/tests/test_storage.py) and [test_extraction.py](file:///home/abooj/projects/recipe-shelf/backend/tests/test_extraction.py) relative to `__file__`:
+```python
+heic_path = os.path.join(os.path.dirname(__file__), "test.heic")
+```
+This ensures the tests run successfully regardless of whether they are executed from the repository root or from the `./backend` directory.
+
+
+
 
 

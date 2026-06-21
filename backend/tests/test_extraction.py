@@ -44,8 +44,8 @@ def test_extract_endpoint_heic_conversion(mocker):
     import os
     from PIL import Image
     
-    heic_path = "backend/tests/test.heic"
-    assert os.path.exists(heic_path), "Test HEIC file is missing"
+    heic_path = os.path.join(os.path.dirname(__file__), "test.heic")
+    assert os.path.exists(heic_path), f"Test HEIC file is missing at {heic_path}"
     
     with open(heic_path, "rb") as f:
         heic_b64 = base64.b64encode(f.read()).decode("utf-8")
