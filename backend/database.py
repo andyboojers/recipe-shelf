@@ -253,6 +253,42 @@ def search_recipes(query: str) -> list[dict]:
         })
     return results
 
+def find_candidate_duplicates(title: str, limit: int = 5) -> list[dict]:
+    import re
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Extract words to do a loose "OR" search in FTS
+    words = re.findall(r'\w+', title)
+    if not words:
+        return []
+        
+    match_str = " OR ".join([f'"{w}"*' for w in words])
+    
+    try:
+        cursor.execute("""
+            SELECT r.* 
+            FROM recipes_cache r
+            JOIN recipe_search s ON r.id = s.id
+            WHERE recipe_search MATCH ?
+            ORDER BY rank
+            LIMIT ?
+        """, (match_str, limit))
+        rows = cursor.fetchall()
+    except sqlite3.OperationalError:
+        return []
+    finally:
+        conn.close()
+        
+    results = []
+    for row in rows:
+        results.append({
+            "id": row["id"],
+            "title": row["title"],
+            "ingredients": json.loads(row["ingredients"]) if row["ingredients"] else []
+        })
+    return results
+
 def get_cached_file(drive_file_id: str) -> dict:
     conn = get_db()
     cursor = conn.cursor()

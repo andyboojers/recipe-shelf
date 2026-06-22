@@ -217,6 +217,27 @@ def save_recipe_endpoint(request: RecipeSaveRequest):
     draft = get_draft(request.draft_id)
     if not draft:
         raise HTTPException(status_code=404, detail="Draft not found")
+        
+    if not request.force_save:
+        from database import find_candidate_duplicates
+        from services.gemini_service import check_duplicate_recipe
+        candidates = find_candidate_duplicates(request.title, limit=5)
+        if candidates:
+            new_recipe_data = {"title": request.title, "ingredients": request.ingredients}
+            duplicate_check = check_duplicate_recipe(new_recipe_data, candidates)
+            if duplicate_check.get("is_duplicate"):
+                dup_id = duplicate_check.get("duplicate_id")
+                dup_title = next((c["title"] for c in candidates if c["id"] == dup_id), "an existing recipe")
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "duplicate_detected": True,
+                        "duplicate_id": dup_id,
+                        "duplicate_title": dup_title,
+                        "message": f"This looks very similar to your existing recipe: '{dup_title}'. Do you still want to save it as a new recipe?"
+                    }
+                )
+    
     
     recipe_id = str(uuid.uuid4())
     recipe_data = {

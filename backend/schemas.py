@@ -53,6 +53,7 @@ class RecipeSaveRequest(BaseModel):
     servings: Optional[str] = None
     cooking_time: Optional[str] = None
     tags: List[str] = []
+    force_save: bool = False
 
 class RecipeUpdateRequest(BaseModel):
     title: str

@@ -81,3 +81,55 @@ def extract_recipes_from_images(image_parts: list[dict]) -> dict:
         print(f"Failed to parse Gemini response or API error: {e}")
         print(f"Raw response was: {response.text if 'response' in locals() else 'None'}")
         return {"recipes": [], "detected_photos": []}
+
+def check_duplicate_recipe(new_recipe: dict, candidates: list[dict]) -> dict:
+    """
+    Evaluates if a new recipe is a duplicate of any candidate recipes using Gemini.
+    """
+    if not candidates:
+        return {"is_duplicate": False, "duplicate_id": None}
+        
+    generation_config = {
+        "temperature": 0.0,
+        "response_mime_type": "application/json",
+    }
+    
+    system_instruction = (
+        "You are an expert culinary assistant. Your job is to determine if a newly submitted recipe is a semantic duplicate of any existing candidate recipes. "
+        "Two recipes are duplicates if they are the exact same dish with highly similar ingredients, even if the wording or spelling differs slightly. "
+        "Return a JSON object with two keys: "
+        "'is_duplicate' (boolean, true if a semantic match is found), "
+        "'duplicate_id' (string, the 'id' of the matching candidate recipe, or null if no match)."
+    )
+    
+    model = genai.GenerativeModel(
+        model_name="gemini-3.1-flash-lite",
+        generation_config=generation_config,
+        system_instruction=system_instruction
+    )
+    
+    prompt = f"New Recipe to check:\n{json.dumps(new_recipe, indent=2)}\n\nExisting Candidates:\n"
+    for c in candidates:
+        candidate_data = {
+            "id": c.get("id"),
+            "title": c.get("title"),
+            "ingredients": c.get("ingredients")
+        }
+        prompt += f"{json.dumps(candidate_data, indent=2)}\n"
+        
+    try:
+        response = model.generate_content(prompt, request_options={"timeout": 30})
+        text = response.text.strip()
+        # Clean markdown if present
+        if text.startswith("```json"): text = text[7:]
+        elif text.startswith("```"): text = text[3:]
+        if text.endswith("```"): text = text[:-3]
+            
+        data = json.loads(text.strip())
+        return {
+            "is_duplicate": bool(data.get("is_duplicate", False)),
+            "duplicate_id": data.get("duplicate_id")
+        }
+    except Exception as e:
+        print(f"Failed to check duplicate with Gemini: {e}")
+        return {"is_duplicate": False, "duplicate_id": None}

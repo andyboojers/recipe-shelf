@@ -29,11 +29,32 @@ function DraftEditor({ draft, onSave, onCancel }) {
       });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
+        if (res.status === 409 && errorData.detail?.duplicate_detected) {
+            const msg = errorData.detail.message || `This looks very similar to your existing recipe. Do you still want to save it as a new recipe?`;
+            if (window.confirm(msg)) {
+                // User chose to save anyway, set force_save and resubmit
+                updatedRecipe.force_save = true;
+                const forceRes = await fetch('/api/recipes', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(updatedRecipe),
+                });
+                if (!forceRes.ok) {
+                   const forceErr = await forceRes.json().catch(() => ({}));
+                   throw new Error(forceErr.detail || 'Save failed after overriding duplicate');
+                }
+                onSave();
+                return;
+            } else {
+                // User cancelled the save
+                return;
+            }
+        }
         throw new Error(errorData.detail || 'Save failed');
       }
       onSave();
     } catch (err) {
-      alert("Error saving recipe: " + err.message);
+      alert("Error saving recipe: " + (err.message || err));
     } finally {
       setSaving(false);
     }
