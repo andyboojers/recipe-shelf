@@ -82,7 +82,27 @@ heic_path = os.path.join(os.path.dirname(__file__), "test.heic")
 ```
 This ensures the tests run successfully regardless of whether they are executed from the repository root or from the `./backend` directory.
 
+---
 
+## Defect 005: iOS Safari Aggressive Caching of index.html
+**Date:** 2026-06-21
 
+- [x] Fix Defect 005: iOS Safari Aggressive Caching of index.html
 
+### Description
+After deploying a frontend update to catch and diagnose HEIC upload errors, an iPhone running Safari continued to display the old, generic "Error extracting recipes: load failed" alert instead of the new diagnostic report.
 
+### Root Cause Analysis
+Single Page Applications (SPAs) use hashed filenames for their JavaScript bundles, but rely on a static `index.html` file to point the browser to the newest bundle. `nginx.conf` did not specify any Cache-Control headers for `index.html`. As a result, Safari aggressively cached the old `index.html` file, never realizing a new version of the app had been deployed.
+
+### Resolution
+Updated [frontend/nginx.conf](file:///home/abooj/projects/recipe-shelf/frontend/nginx.conf) with a specific location block to instruct browsers never to cache `index.html`:
+```nginx
+location = /index.html {
+    root /usr/share/nginx/html;
+    add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0";
+    add_header Pragma "no-cache";
+    add_header Expires 0;
+}
+```
+This forces the browser to always fetch a fresh `index.html` on load, ensuring all future deployments are instantly visible to the user without requiring them to clear their cache.

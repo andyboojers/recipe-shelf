@@ -1,7 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 function RecipeDetail({ recipe, onBack }) {
   if (!recipe) return null;
+
+  const [activeTab, setActiveTab] = useState(
+    recipe.image_drive_id ? 'relevant' : 'original'
+  );
+
+  const hasCropped = !!recipe.image_drive_id;
+  const hasOriginal = recipe.original_drive_ids && recipe.original_drive_ids.length > 0;
 
   return (
     <div className="glass-card" style={{ maxWidth: '1200px', margin: '0 auto', animation: 'fadeIn 0.5s ease-out' }}>
@@ -62,12 +69,74 @@ function RecipeDetail({ recipe, onBack }) {
 
       {/* Main Layout: Side-by-Side original scan and parsed text */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '3rem' }}>
-        
-        {/* Left Side: Original scan image */}
+        {/* Left Side: Recipe Images (Relevant Cropped vs. Original) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <h3 style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Original Scan</h3>
+          {hasCropped && hasOriginal ? (
+            <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.25)', padding: '0.3rem', borderRadius: '2rem', border: '1px solid var(--glass-border)' }}>
+              <button
+                type="button"
+                onClick={() => setActiveTab('relevant')}
+                style={{
+                  flex: 1,
+                  background: activeTab === 'relevant' ? 'var(--primary)' : 'transparent',
+                  border: 'none',
+                  color: activeTab === 'relevant' ? '#fff' : 'var(--text-muted)',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '2rem',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '0.85rem',
+                  transition: 'all 0.3s ease',
+                  boxShadow: 'none'
+                }}
+              >
+                Relevant Photo
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('original')}
+                style={{
+                  flex: 1,
+                  background: activeTab === 'original' ? 'var(--primary)' : 'transparent',
+                  border: 'none',
+                  color: activeTab === 'original' ? '#fff' : 'var(--text-muted)',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '2rem',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '0.85rem',
+                  transition: 'all 0.3s ease',
+                  boxShadow: 'none'
+                }}
+              >
+                Original Scan{recipe.original_drive_ids.length > 1 ? 's' : ''}
+              </button>
+            </div>
+          ) : (
+            <h3 style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+              {activeTab === 'relevant' ? 'Recipe Photo' : 'Original Scan'}
+            </h3>
+          )}
           
-          {recipe.original_drive_ids && recipe.original_drive_ids.length > 0 ? (
+          {activeTab === 'relevant' && recipe.image_drive_id && (
+            <div style={{ 
+              borderRadius: '16px', 
+              overflow: 'hidden', 
+              boxShadow: '0 12px 40px rgba(0,0,0,0.6)', 
+              border: '1px solid var(--glass-border)',
+              background: 'rgba(0,0,0,0.3)',
+              position: 'sticky',
+              top: '2rem'
+            }}>
+              <img 
+                src={`/api/files/${recipe.image_drive_id}`} 
+                alt="Recipe Photo" 
+                style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '75vh', objectFit: 'contain' }} 
+              />
+            </div>
+          )}
+
+          {activeTab === 'original' && recipe.original_drive_ids && recipe.original_drive_ids.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', position: 'sticky', top: '2rem', maxHeight: '100vh', overflowY: 'auto', paddingRight: '0.5rem' }}>
               {recipe.original_drive_ids.map((drive_id, idx) => (
                 <div key={idx} style={{ 
@@ -86,30 +155,16 @@ function RecipeDetail({ recipe, onBack }) {
                 </div>
               ))}
             </div>
-          ) : recipe.image_drive_id ? (
-            <div style={{ 
-              borderRadius: '16px', 
-              overflow: 'hidden', 
-              boxShadow: '0 12px 40px rgba(0,0,0,0.6)', 
-              border: '1px solid var(--glass-border)',
-              background: 'rgba(0,0,0,0.3)',
-              position: 'sticky',
-              top: '2rem'
-            }}>
-              <img 
-                src={`/api/files/${recipe.image_drive_id}`} 
-                alt="Recipe Photo" 
-                style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '75vh', objectFit: 'contain' }} 
-              />
-            </div>
-          ) : (
+          )}
+
+          {!recipe.image_drive_id && (!recipe.original_drive_ids || recipe.original_drive_ids.length === 0) && (
             <div style={{ 
               aspectRatio: '3/4', 
               background: 'rgba(0,0,0,0.2)', 
               borderRadius: '16px', 
               display: 'flex', 
               alignItems: 'center', 
-              justify: 'center', 
+              justifyContent: 'center', 
               color: 'var(--text-muted)',
               border: '1px dashed var(--glass-border)'
             }}>
