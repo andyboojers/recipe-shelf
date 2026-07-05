@@ -68,7 +68,7 @@ function RecipeDetail({ recipe, onBack }) {
       </div>
 
       {/* Main Layout: Side-by-Side original scan and parsed text */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '3rem' }}>
+      <div className="two-column-layout recipe-detail">
         {/* Left Side: Recipe Images (Relevant Cropped vs. Original) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {hasCropped && hasOriginal ? (

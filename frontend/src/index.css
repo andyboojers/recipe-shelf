@@ -87,6 +87,7 @@ input, textarea {
   padding: 0.75rem 1rem;
   transition: var(--transition);
   width: 100%;
+  font-size: 16px; /* Prevents auto-zoom on iOS Safari */
 }
 
 input:focus, textarea:focus {
@@ -106,7 +107,7 @@ label {
 #root {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: max(2rem, env(safe-area-inset-top)) max(2rem, env(safe-area-inset-right)) max(2rem, env(safe-area-inset-bottom)) max(2rem, env(safe-area-inset-left));
 }
 
 /* Header */
@@ -116,7 +117,7 @@ label {
 }
 
 .app-title {
-  font-size: 3.5rem;
+  font-size: clamp(2.5rem, 8vw, 3.5rem);
   background: linear-gradient(to right, var(--primary), var(--accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -137,4 +138,32 @@ label {
   0% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.05); opacity: 0.7; }
   100% { transform: scale(1); opacity: 1; }
+}
+
+/* Responsive Layouts */
+.two-column-layout {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 2rem;
+}
+
+.two-column-layout.recipe-detail {
+  grid-template-columns: 1.2fr 1.8fr;
+  gap: 3rem;
+}
+
+@media (max-width: 768px) {
+  .two-column-layout, .two-column-layout.recipe-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  #root {
+    padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  }
+  
+  .glass-card {
+    padding: 1.25rem;
+  }
 }

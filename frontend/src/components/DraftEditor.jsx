@@ -66,7 +66,7 @@ function DraftEditor({ draft, onSave, onCancel }) {
         <h2 style={{ color: 'var(--primary)' }}>Edit Recipe Draft</h2>
       </div>
       
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
+      <div className="two-column-layout">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {draft.original_image_paths && draft.original_image_paths.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', position: 'sticky', top: '2rem' }}>
